@@ -1,0 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Tajawal:wght@300;400;500;700;800;900&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --orange: #F97316;
+  --orange-dark: #EA6A0A;
+  --orange-light: #FFF7ED;
+  --dark: #0F0F0F;
+  --dark2: #1A1A1A;
+  --white: #FFFFFF;
+  --off-white: #FAFAF8;
+  --gray: #6A6A6A;
+  --gray-light: #8A8A8A;
+  --border: #E8E5DF;
+  --font-display: 'Tajawal', sans-serif;
+  --font-body: 'Cairo', sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+body { font-family: var(--font-body); background: var(--white); color: var(--dark); overflow-x: hidden; }
+h1, h2, h3, h4 { font-family: var(--font-display); line-height: 1.2; }
+.container { max-width: 1240px; margin: 0 auto; padding: 0 40px; }
+@media (max-width: 768px) { .container { padding: 0 16px; } }
