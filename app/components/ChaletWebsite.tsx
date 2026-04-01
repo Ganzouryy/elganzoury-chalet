@@ -16,7 +16,6 @@ interface Props {
 export default function ChaletWebsite({ pricing, media, content }: Props) {
   const [isAR, setIsAR] = useState(true)
   const [navScrolled, setNavScrolled] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
   const [activeFloor, setActiveFloor] = useState('ground')
   const [heroImg, setHeroImg] = useState(0)
   const [calYear, setCalYear] = useState(new Date().getFullYear())
@@ -46,27 +45,23 @@ export default function ChaletWebsite({ pricing, media, content }: Props) {
   const weekdayPrice = pricing.find(p => p.period_type === 'weekday')?.price || 1750
   const weekendPrice = pricing.find(p => p.period_type === 'weekend')?.price || 2000
 
-  // Fetch bookings for calendar
   useEffect(() => {
     supabase.from('bookings').select('check_in,check_out').eq('status','confirmed')
       .then(({ data }) => { if (data) setBookings(data) })
   }, [])
 
-  // Nav scroll
   useEffect(() => {
     const handler = () => setNavScrolled(window.scrollY > 60)
     window.addEventListener('scroll', handler)
     return () => window.removeEventListener('scroll', handler)
   }, [])
 
-  // Hero image cycle
   useEffect(() => {
     if (heroImages.length <= 1) return
     const interval = setInterval(() => setHeroImg(i => (i + 1) % heroImages.length), 5000)
     return () => clearInterval(interval)
   }, [heroImages.length])
 
-  // Price calculator
   const calcPrice = () => {
     if (!checkIn || !checkOut) return null
     const start = new Date(checkIn), end = new Date(checkOut)
@@ -83,7 +78,6 @@ export default function ChaletWebsite({ pricing, media, content }: Props) {
 
   const priceCalc = calcPrice()
 
-  // Calendar
   const isBooked = (date: Date) => {
     return bookings.some(b => {
       const start = new Date(b.check_in), end = new Date(b.check_out)
@@ -109,28 +103,41 @@ export default function ChaletWebsite({ pricing, media, content }: Props) {
       cells.push(
         <div key={d} style={{
           aspectRatio:'1', display:'flex', alignItems:'center', justifyContent:'center',
-          borderRadius:6, fontSize:13, fontWeight:600,
-          background: booked ? '#fee2e2' : '#dcfce7',
-          color: booked ? '#dc2626' : '#15803d',
-          outline: isToday ? '2px solid #F97316' : 'none',
-        }}>{d}</div>
+          borderRadius:8, fontSize:14, fontWeight:700,
+          background: booked ? '#ef4444' : '#22c55e',
+          color: '#fff',
+          outline: isToday ? '3px solid #F97316' : 'none',
+          outlineOffset: 2,
+          boxShadow: booked ? '0 2px 8px rgba(239,68,68,0.4)' : '0 2px 8px rgba(34,197,94,0.3)',
+          cursor: booked ? 'not-allowed' : 'pointer',
+          transition: 'transform 0.15s',
+        }}
+          onMouseEnter={e => { if (!booked) (e.currentTarget as HTMLElement).style.transform = 'scale(1.15)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
+        >{d}</div>
       )
     }
     return cells
   }
 
-  // WhatsApp link builder
   const buildWALink = () => {
-    let msg = isAR ? 'مرحباً، أود الاستفسار عن حجز شاليه الجنزوري.\n' : "Hello, I'd like to inquire about booking Elganzoury Chalet.\n"
-    if (renterName) msg += (isAR ? 'الاسم: ' : 'Name: ') + renterName + '\n'
-    if (renterPhone) msg += (isAR ? 'الهاتف: ' : 'Phone: ') + renterPhone + '\n'
-    if (checkIn) msg += (isAR ? 'تاريخ الوصول: ' : 'Check-in: ') + checkIn + '\n'
-    if (checkOut) msg += (isAR ? 'تاريخ المغادرة: ' : 'Check-out: ') + checkOut + '\n'
-    if (priceCalc) msg += (isAR ? 'الإجمالي المتوقع: ' : 'Estimated total: ') + priceCalc.total.toLocaleString() + (isAR ? ' جنيه' : ' EGP')
+    let msg = isAR
+      ? `مرحباً، أود حجز شاليه الجنزوري.\n\n`
+      : `Hello, I'd like to book Elganzoury Chalet.\n\n`
+    if (renterName) msg += (isAR ? '👤 الاسم: ' : '👤 Name: ') + renterName + '\n'
+    if (renterPhone) msg += (isAR ? '📞 الهاتف: ' : '📞 Phone: ') + renterPhone + '\n'
+    if (checkIn) msg += (isAR ? '📅 تاريخ الوصول: ' : '📅 Check-in: ') + checkIn + '\n'
+    if (checkOut) msg += (isAR ? '📅 تاريخ المغادرة: ' : '📅 Check-out: ') + checkOut + '\n'
+    if (priceCalc) {
+      msg += (isAR ? '🌙 عدد الليالي: ' : '🌙 Nights: ') + priceCalc.nights + '\n'
+      msg += (isAR ? '💰 الإجمالي: ' : '💰 Total: ') + priceCalc.total.toLocaleString() + (isAR ? ' جنيه' : ' EGP') + '\n'
+    }
+    msg += isAR
+      ? `\n✅ سأقوم بإرسال لقطة شاشة الدفع عبر InstaPay.`
+      : `\n✅ I will send the InstaPay payment screenshot.`
     return 'https://wa.me/201159710758?text=' + encodeURIComponent(msg)
   }
 
-  // Submit booking request to Supabase
   const submitBooking = async () => {
     if (!renterName || !renterPhone || !checkIn || !checkOut) {
       alert(isAR ? 'يرجى ملء جميع الحقول' : 'Please fill all fields')
@@ -159,10 +166,6 @@ export default function ChaletWebsite({ pricing, media, content }: Props) {
     'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=1600&q=80',
   ]
   const currentHeroBg = heroImages.length > 0 ? heroImages[heroImg]?.url : defaultHeroBg[heroImg % 3]
-
-  const s: Record<string, React.CSSProperties> = {
-    // reusable inline style objects
-  }
 
   return (
     <div style={{ direction: isAR ? 'rtl' : 'ltr', fontFamily: "'Cairo', sans-serif" }}>
@@ -232,14 +235,8 @@ export default function ChaletWebsite({ pricing, media, content }: Props) {
               </a>
             </div>
           </div>
-          {/* Stats */}
           <div style={{ borderTop:'1px solid rgba(255,255,255,0.15)', marginTop:60, paddingTop:28, display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:0 }}>
-            {[
-              ['5', isAR?'غرف نوم':'Bedrooms'],
-              ['4', isAR?'حمامات':'Bathrooms'],
-              ['180°', isAR?'إطلالة بحرية':'Sea View'],
-              ['3', isAR?'طوابق':'Floors'],
-            ].map(([num, label]) => (
+            {[['5',isAR?'غرف نوم':'Bedrooms'],['4',isAR?'حمامات':'Bathrooms'],['180°',isAR?'إطلالة بحرية':'Sea View'],['3',isAR?'طوابق':'Floors']].map(([num,label])=>(
               <div key={label} style={{ textAlign:'center', padding:'0 12px' }}>
                 <div style={{ fontFamily:"'Tajawal',sans-serif", fontSize:'clamp(28px,4vw,44px)', fontWeight:900, color:'#F97316' }}>{num}</div>
                 <div style={{ fontSize:12, color:'rgba(255,255,255,0.7)', fontWeight:600, marginTop:4 }}>{label}</div>
@@ -265,11 +262,7 @@ export default function ChaletWebsite({ pricing, media, content }: Props) {
             </p>
           </div>
           <div style={{ position:'relative', overflow:'hidden', minHeight:400 }}>
-            <img
-              src={media.find(m=>m.section==='about')?.url || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=900&q=80'}
-              alt="about"
-              style={{ width:'100%', height:'100%', objectFit:'cover' }}
-            />
+            <img src={media.find(m=>m.section==='about')?.url || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=900&q=80'} alt="about" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
             <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top,rgba(0,0,0,0.3) 0%,transparent 60%)' }} />
             <div style={{ position:'absolute', bottom:28, right:28, background:'rgba(255,255,255,0.95)', padding:'14px 20px', borderRadius:8, display:'flex', alignItems:'center', gap:10, boxShadow:'0 8px 30px rgba(0,0,0,0.15)' }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="#F97316"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
@@ -295,7 +288,7 @@ export default function ChaletWebsite({ pricing, media, content }: Props) {
         </div>
       </div>
 
-      {/* ===== FLOORS ===== */}
+      {/* ===== FLOORS — REDESIGNED MAGAZINE STYLE ===== */}
       <section id="floors" style={{ padding:'clamp(64px,10vw,120px) 0', background:'#FFFFFF' }}>
         <div className="container">
           <div style={{ textAlign:'center', maxWidth:640, margin:'0 auto 64px' }}>
@@ -307,48 +300,72 @@ export default function ChaletWebsite({ pricing, media, content }: Props) {
               {isAR ? 'شاليه مُصمَّم بعناية على ٣ طوابق لاستيعاب عائلتك بكل راحة واتساع.' : 'Thoughtfully designed across 3 floors to give your family all the space they need.'}
             </p>
           </div>
-          {/* Tabs */}
-          <div style={{ display:'flex', justifyContent:'center', gap:8, marginBottom:48, flexWrap:'wrap' }}>
-            {[['ground',isAR?'الدور الأرضي':'Ground Floor'],['upper',isAR?'الدور العلوي':'Upper Floor'],['roof',isAR?'السطح':'Rooftop']].map(([id,label])=>(
+
+          {/* Floor selector — magazine tabs */}
+          <div style={{ display:'flex', justifyContent:'center', gap:0, marginBottom:56, border:'1px solid #E8E5DF', borderRadius:8, overflow:'hidden', maxWidth:480, margin:'0 auto 56px' }}>
+            {[['ground',isAR?'الدور الأرضي':'Ground'],['upper',isAR?'الدور العلوي':'Upper'],['roof',isAR?'السطح':'Rooftop']].map(([id,label],i)=>(
               <button key={id} onClick={()=>setActiveFloor(id)} style={{
-                padding:'12px 28px', borderRadius:4, border:'1.5px solid', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:"'Cairo',sans-serif",
+                flex:1, padding:'16px 8px', border:'none', borderLeft: i>0 ? '1px solid #E8E5DF' : 'none',
+                fontSize:14, fontWeight:800, cursor:'pointer', fontFamily:"'Cairo',sans-serif",
                 background: activeFloor===id ? '#F97316' : '#fff',
-                borderColor: activeFloor===id ? '#F97316' : '#E8E5DF',
-                color: activeFloor===id ? '#fff' : '#8A8A8A',
-                boxShadow: activeFloor===id ? '0 4px 20px rgba(249,115,22,0.3)' : 'none',
+                color: activeFloor===id ? '#fff' : '#6A6A6A',
+                transition:'all 0.3s',
               }}>{label}</button>
             ))}
           </div>
-          {/* Floor Panels */}
-          {activeFloor === 'ground' && <FloorPanel
-            isAR={isAR} tag={isAR?'الدور الأرضي':'GROUND FLOOR'}
+
+          {/* Floor Panels — magazine layout */}
+          {activeFloor === 'ground' && <MagazineFloor isAR={isAR}
+            number="01" tag={isAR?'الدور الأرضي':'GROUND FLOOR'}
             title={isAR?'الدور الأرضي':'Ground Floor'}
-            desc={isAR?'يوفر غرفتي نوم واسعتين وكل مرافق المعيشة الأساسية.':'Two spacious bedrooms and all essential living amenities.'}
-            features={isAR?['غرفتا نوم، كل غرفة بسريرين','كل غرفة: دولاب ملابس ومروحة','حمامان كاملان','مطبخ مجهَّز']:['2 Bedrooms — each with 2 beds','Each room has wardrobe & fan','2 full bathrooms','Fully equipped kitchen']}
+            subtitle={isAR?'المعيشة والراحة الأساسية':'Living & Core Comfort'}
+            desc={isAR?'الدور الأرضي مُجهَّز بالكامل، يضم غرفتي نوم واسعتين ومطبخاً وكل ما تحتاجه عائلتك للاستمتاع براحة تامة.':'Fully equipped ground floor with two spacious bedrooms, a kitchen, and everything your family needs for complete comfort.'}
+            features={[
+              { icon:'🛏️', title: isAR?'غرفة نوم ١':'Bedroom 1', desc: isAR?'سريران + دولاب + مروحة':'2 beds + wardrobe + fan' },
+              { icon:'🛏️', title: isAR?'غرفة نوم ٢':'Bedroom 2', desc: isAR?'سريران + دولاب + مروحة':'2 beds + wardrobe + fan' },
+              { icon:'🚿', title: isAR?'حمامان':'2 Bathrooms', desc: isAR?'حمامان كاملان':'2 full bathrooms' },
+              { icon:'🍳', title: isAR?'مطبخ':'Kitchen', desc: isAR?'مجهَّز بالكامل':'Fully equipped' },
+            ]}
             image={floorImages.ground[0]?.url}
             placeholder={isAR?'صورة الدور الأرضي — قريباً':'Ground floor photo coming soon'}
+            color="#FFF7ED"
           />}
-          {activeFloor === 'upper' && <FloorPanel
-            isAR={isAR} tag={isAR?'الدور العلوي':'UPPER FLOOR'}
+          {activeFloor === 'upper' && <MagazineFloor isAR={isAR}
+            number="02" tag={isAR?'الدور العلوي':'UPPER FLOOR'}
             title={isAR?'الدور العلوي':'Upper Floor'}
-            desc={isAR?'٣ غرف نوم وبلكونة مطلة على البحر وواي فاي.':'3 bedrooms, sea-facing balcony, and WiFi.'}
-            features={isAR?['غرفة ماستر: سرير كبير + تسريحة + مروحة + دولاب','غرفتان إضافيتان: سريران + دولاب + مروحة','حمامان كاملان','بلكونة مطلة على البحر','واي فاي متاح في هذا الدور']:['Master bedroom: large bed, dressing table, fan, wardrobe','2 additional rooms: 2 beds each, wardrobe & fan','2 full bathrooms','Sea-view balcony','WiFi available on this floor']}
+            subtitle={isAR?'الإطلالة والخصوصية':'Views & Privacy'}
+            desc={isAR?'الدور العلوي هو قلب الشاليه — ثلاث غرف نوم، بلكونة بحرية، وواي فاي للتواصل مع العالم أثناء استمتاعك بالبحر.':'The upper floor is the heart of the chalet — three bedrooms, a sea-view balcony, and WiFi to stay connected while enjoying the sea.'}
+            features={[
+              { icon:'👑', title: isAR?'غرفة ماستر':'Master Bedroom', desc: isAR?'سرير كبير + تسريحة + مروحة + دولاب':'Large bed + dressing table + fan + wardrobe' },
+              { icon:'🛏️', title: isAR?'غرفة نوم ٢':'Bedroom 2', desc: isAR?'سريران + دولاب + مروحة':'2 beds + wardrobe + fan' },
+              { icon:'🛏️', title: isAR?'غرفة نوم ٣':'Bedroom 3', desc: isAR?'سريران + دولاب + مروحة':'2 beds + wardrobe + fan' },
+              { icon:'🚿', title: isAR?'حمامان':'2 Bathrooms', desc: isAR?'حمامان كاملان':'2 full bathrooms' },
+              { icon:'🌊', title: isAR?'بلكونة بحرية':'Sea Balcony', desc: isAR?'إطلالة مباشرة على البحر':'Direct sea view' },
+              { icon:'📶', title: 'WiFi', desc: isAR?'متاح في هذا الدور':'Available on this floor' },
+            ]}
             image={floorImages.upper[0]?.url}
             placeholder={isAR?'صورة الدور العلوي — قريباً':'Upper floor photo coming soon'}
+            color="#F0F9FF"
           />}
-          {activeFloor === 'roof' && <FloorPanel
-            isAR={isAR} tag={isAR?'السطح':'ROOFTOP'}
+          {activeFloor === 'roof' && <MagazineFloor isAR={isAR}
+            number="03" tag={isAR?'السطح':'ROOFTOP'}
             title={isAR?'السطح البانورامي':'Panoramic Rooftop'}
-            desc={isAR?'سطح مفتوح بإطلالة بحرية بانورامية ١٨٠ درجة — المكان المثالي لجلسات الغروب.':'Open rooftop with 180° panoramic sea view — perfect for sunset gatherings.'}
-            features={isAR?['إطلالة بحرية بانورامية ١٨٠ درجة','مساحة مفتوحة للجلسات والتجمعات','مثالي لجلسات الغروب والسهرات']:['180° panoramic Mediterranean view','Open space for gatherings & seating','Ideal for sunset & evening sessions']}
+            subtitle={isAR?'تاج الشاليه — ١٨٠ درجة':'Crown of the Chalet — 180°'}
+            desc={isAR?'التاج الحقيقي للشاليه — سطح مفتوح بإطلالة بحرية بانورامية ١٨٠ درجة لا مثيل لها. المكان المثالي لجلسات الغروب والسهرات الرائعة مع العائلة.':'The crown jewel — an open rooftop with an unmatched 180° panoramic sea view. The perfect spot for sunset sessions and unforgettable family evenings.'}
+            features={[
+              { icon:'🌅', title: isAR?'إطلالة ١٨٠ درجة':'180° View', desc: isAR?'البحر الأبيض المتوسط بالكامل أمامك':'Full Mediterranean panorama' },
+              { icon:'🌙', title: isAR?'جلسات السهرة':'Evening Sessions', desc: isAR?'مساحة مفتوحة للتجمعات':'Open space for gatherings' },
+              { icon:'🌞', title: isAR?'مشاهدة الغروب':'Sunset Watching', desc: isAR?'أجمل غروب في الساحل':'The most beautiful sunset on the coast' },
+            ]}
             image={floorImages.roof[0]?.url}
             placeholder={isAR?'صورة السطح — قريباً':'Rooftop photo coming soon'}
+            color="#FFF7ED"
           />}
         </div>
       </section>
 
       {/* ===== GALLERY ===== */}
-      <section id="gallery" style={{ padding:'clamp(64px,10vw,120px) 0', background:'#FFFFFF' }}>
+      <section id="gallery" style={{ padding:'clamp(64px,10vw,120px) 0', background:'#FAFAF8' }}>
         <div className="container">
           <div style={{ textAlign:'center', maxWidth:560, margin:'0 auto 48px' }}>
             <SectionTag label={isAR?'معرض الصور':'GALLERY'} center />
@@ -358,12 +375,12 @@ export default function ChaletWebsite({ pricing, media, content }: Props) {
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr', gridTemplateRows:'280px 280px', gap:12 }}>
             {(galleryImages.length > 0 ? galleryImages : [
-              { url:'https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?w=800&q=80', tall:true },
+              { url:'https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?w=800&q=80' },
               { url:'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&q=80' },
               { url:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80' },
               { url:'' }, { url:'' },
-            ] as any[]).slice(0,5).map((img: any, i: number) => (
-              <div key={i} style={{ gridRow: i===0?'span 2':'span 1', overflow:'hidden', borderRadius:8, background:'#f0ece6', position:'relative' }}>
+            ] as any[]).slice(0,5).map((img:any, i:number) => (
+              <div key={i} style={{ gridRow:i===0?'span 2':'span 1', overflow:'hidden', borderRadius:8, background:'#f0ece6', position:'relative' }}>
                 {img.url ? (
                   <img src={img.url} alt={`gallery ${i}`} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.6s ease' }}
                     onMouseEnter={e=>(e.currentTarget.style.transform='scale(1.05)')}
@@ -382,48 +399,55 @@ export default function ChaletWebsite({ pricing, media, content }: Props) {
         </div>
       </section>
 
-      {/* ===== PRICING ===== */}
-      <section id="pricing" style={{ padding:'clamp(64px,10vw,120px) 0', background:'#FAFAF8' }}>
+      {/* ===== PRICING — REDESIGNED ===== */}
+      <section id="pricing" style={{ padding:'clamp(64px,10vw,120px) 0', background:'#0F0F0F' }}>
         <div className="container">
-          <div style={{ maxWidth:600, marginBottom:60 }}>
-            <SectionTag label={isAR?'الأسعار':'PRICING'} />
-            <h2 style={{ fontSize:'clamp(32px,4vw,52px)', fontWeight:900, color:'#0F0F0F', marginBottom:16, fontFamily:"'Tajawal',sans-serif" }}>
+          <div style={{ textAlign:'center', maxWidth:600, margin:'0 auto 64px' }}>
+            <SectionTag label={isAR?'الأسعار':'PRICING'} dark center />
+            <h2 style={{ fontSize:'clamp(32px,4vw,52px)', fontWeight:900, color:'#fff', marginBottom:16, fontFamily:"'Tajawal',sans-serif" }}>
               {isAR?'أسعار شفافة بلا مفاجآت':'Transparent Pricing, No Surprises'}
             </h2>
-            <p style={{ fontSize:16, color:'#6A6A6A', lineHeight:1.9 }}>
-              {isAR?'الأسعار تختلف بحسب اليوم. الشاليه بالكامل لك طوال فترة الإقامة.':'Prices vary by day. The full chalet is exclusively yours for the entire stay.'}
+            <p style={{ fontSize:16, color:'rgba(255,255,255,0.6)', lineHeight:1.9 }}>
+              {isAR?'الشاليه بالكامل لك طوال فترة إقامتك. الأسعار تختلف بحسب اليوم.':'The full chalet is exclusively yours. Prices vary by day.'}
             </p>
           </div>
-          <div>
+
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))', gap:24, marginBottom:40 }}>
             {(pricing.length > 0 ? pricing : [
               { label_ar:'نهاية الأسبوع', label_en:'Weekend', price:2000, period_type:'weekend', id:'1' },
               { label_ar:'أيام الأسبوع', label_en:'Weekdays', price:1750, period_type:'weekday', id:'2' },
             ]).map((p) => (
-              <div key={p.id} style={{ display:'grid', gridTemplateColumns:'1fr auto', alignItems:'center', gap:24, padding:'28px 0', borderBottom:'1px solid #E8E5DF', transition:'padding-right 0.3s' }}
-                onMouseEnter={e=>(e.currentTarget.style.paddingRight='12px')}
-                onMouseLeave={e=>(e.currentTarget.style.paddingRight='0')}>
-                <div>
-                  <div style={{ fontSize:11, fontWeight:700, letterSpacing:2, textTransform:'uppercase', color:'#F97316', marginBottom:4 }}>
-                    {p.period_type === 'weekend' ? (isAR?'الجمعة والسبت':'Friday & Saturday') : (isAR?'الأحد — الخميس':'Sunday — Thursday')}
+              <div key={p.id} style={{
+                background: p.period_type==='weekend' ? '#F97316' : 'rgba(255,255,255,0.06)',
+                border: p.period_type==='weekend' ? 'none' : '1px solid rgba(255,255,255,0.12)',
+                borderRadius:16, padding:'40px 36px', position:'relative', overflow:'hidden',
+              }}>
+                {p.period_type==='weekend' && (
+                  <div style={{ position:'absolute', top:20, left:20, background:'rgba(255,255,255,0.2)', borderRadius:20, padding:'4px 12px', fontSize:11, fontWeight:700, color:'#fff', letterSpacing:1 }}>
+                    {isAR?'الأكثر طلباً':'Most Popular'}
                   </div>
-                  <div style={{ fontSize:20, fontWeight:800, color:'#0F0F0F', fontFamily:"'Tajawal',sans-serif", marginBottom:4 }}>
-                    {isAR ? p.label_ar : p.label_en}
-                  </div>
-                  <div style={{ fontSize:14, color:'#8A8A8A' }}>
-                    {p.period_type==='weekend' ? (isAR?'الأيام الأكثر طلباً في الموسم':'Most in-demand days of the season') : (isAR?'هدوء أكثر وأسعار أوفر':'Quieter days, better value')}
-                  </div>
+                )}
+                <div style={{ fontSize:11, fontWeight:700, letterSpacing:3, textTransform:'uppercase', color: p.period_type==='weekend' ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.4)', marginBottom:12, marginTop: p.period_type==='weekend' ? 28 : 0 }}>
+                  {p.period_type === 'weekend' ? (isAR?'الجمعة والسبت':'Friday & Saturday') : (isAR?'الأحد — الخميس':'Sunday — Thursday')}
                 </div>
-                <div style={{ textAlign:'left' }}>
-                  <div style={{ fontSize:'clamp(28px,4vw,44px)', fontWeight:900, color:'#F97316', fontFamily:"'Tajawal',sans-serif" }}>{p.price.toLocaleString()}</div>
-                  <div style={{ fontSize:13, color:'#8A8A8A', fontWeight:600 }}>{isAR?'جنيه / ليلة':'EGP / night'}</div>
+                <div style={{ fontSize:22, fontWeight:900, color:'#fff', fontFamily:"'Tajawal',sans-serif", marginBottom:8 }}>
+                  {isAR ? p.label_ar : p.label_en}
+                </div>
+                <div style={{ display:'flex', alignItems:'baseline', gap:8, marginBottom:16 }}>
+                  <span style={{ fontSize:'clamp(44px,6vw,64px)', fontWeight:900, color:'#fff', fontFamily:"'Tajawal',sans-serif", lineHeight:1 }}>{p.price.toLocaleString()}</span>
+                  <span style={{ fontSize:15, color: p.period_type==='weekend' ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.5)', fontWeight:600 }}>{isAR?'جنيه / ليلة':'EGP / night'}</span>
+                </div>
+                <div style={{ fontSize:14, color: p.period_type==='weekend' ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.45)', lineHeight:1.7 }}>
+                  {p.period_type==='weekend' ? (isAR?'الأيام الأكثر طلباً في الموسم — احجز مبكراً':'Most in-demand days — book early') : (isAR?'هدوء أكثر وأسعار أوفر لإقامة مريحة':'Quieter days, better value for a relaxed stay')}
                 </div>
               </div>
             ))}
           </div>
-          <div style={{ marginTop:40, padding:'24px 28px', background:'#FFF7ED', borderRight: isAR ? '3px solid #F97316' : 'none', borderLeft: !isAR ? '3px solid #F97316' : 'none', borderRadius: isAR ? '0 8px 8px 0' : '8px 0 0 8px' }}>
-            <p style={{ fontSize:14, color:'#1A1A1A', lineHeight:1.9 }}>
+
+          <div style={{ background:'rgba(249,115,22,0.1)', border:'1px solid rgba(249,115,22,0.25)', borderRadius:12, padding:'24px 28px' }}>
+            <p style={{ fontSize:14, color:'rgba(255,255,255,0.75)', lineHeight:1.9, textAlign:'center' }}>
               <strong style={{ color:'#F97316' }}>{isAR?'ملاحظة: ':'Note: '}</strong>
-              {isAR?'الأسعار تقديرية وقابلة للتغيير. يُرجى التواصل عبر واتساب للتأكيد. الحجز مشروط بإتمام الدفع عبر InstaPay.':'Prices are estimates and subject to change. Please confirm via WhatsApp. Booking is confirmed only upon InstaPay payment.'}
+              {isAR?'الأسعار تقديرية وقابلة للتغيير. الحجز مشروط بإتمام الدفع عبر InstaPay.':'Prices are estimates and subject to change. Booking is confirmed only upon InstaPay payment.'}
             </p>
           </div>
         </div>
@@ -433,58 +457,82 @@ export default function ChaletWebsite({ pricing, media, content }: Props) {
       <section id="booking" style={{ padding:'clamp(64px,10vw,120px) 0', background:'#FAFAF8' }}>
         <div className="container">
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))', gap:'clamp(32px,6vw,80px)', alignItems:'start' }}>
-            {/* Left: steps + calendar */}
+
+            {/* Left: calendar + steps */}
             <div>
               <SectionTag label={isAR?'الحجز':'BOOKING'} />
               <h2 style={{ fontSize:'clamp(32px,4vw,48px)', fontWeight:900, color:'#0F0F0F', marginBottom:20, fontFamily:"'Tajawal',sans-serif" }}>
-                {isAR?'احجز إقامتك في خطوات بسيطة':'Reserve Your Stay in Simple Steps'}
+                {isAR?'تحقق من التوفر واحجز':'Check Availability & Book'}
               </h2>
-              <p style={{ fontSize:16, color:'#6A6A6A', lineHeight:1.9, marginBottom:32 }}>
-                {isAR?'لن نُثبِّت حجزك إلا بعد تأكيد الدفع — لضمان جدية الحجز.':'Your booking is only confirmed after payment — serious reservations only.'}
-              </p>
 
               {/* Calendar */}
-              <div style={{ background:'#fff', border:'1px solid #E8E5DF', borderRadius:12, overflow:'hidden', marginBottom:28 }}>
-                <div style={{ background:'#F97316', color:'#fff', padding:'18px 24px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <button onClick={()=>{ let m=calMonth-1,y=calYear; if(m<0){m=11;y--;} setCalMonth(m);setCalYear(y); }} style={{ background:'none', border:'none', color:'#fff', fontSize:20, cursor:'pointer' }}>›</button>
-                  <h4 style={{ fontSize:17, fontWeight:900, fontFamily:"'Tajawal',sans-serif" }}>
+              <div style={{ background:'#fff', border:'1px solid #E8E5DF', borderRadius:16, overflow:'hidden', marginBottom:28, boxShadow:'0 4px 24px rgba(0,0,0,0.06)' }}>
+                <div style={{ background:'#F97316', color:'#fff', padding:'20px 24px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <button onClick={()=>{ let m=calMonth-1,y=calYear; if(m<0){m=11;y--;} setCalMonth(m);setCalYear(y); }} style={{ background:'none', border:'none', color:'#fff', fontSize:20, cursor:'pointer', fontWeight:900 }}>›</button>
+                  <h4 style={{ fontSize:18, fontWeight:900, fontFamily:"'Tajawal',sans-serif" }}>
                     {(isAR?monthNamesAR:monthNamesEN)[calMonth]} {calYear}
                   </h4>
-                  <button onClick={()=>{ let m=calMonth+1,y=calYear; if(m>11){m=0;y++;} setCalMonth(m);setCalYear(y); }} style={{ background:'none', border:'none', color:'#fff', fontSize:20, cursor:'pointer' }}>‹</button>
+                  <button onClick={()=>{ let m=calMonth+1,y=calYear; if(m>11){m=0;y++;} setCalMonth(m);setCalYear(y); }} style={{ background:'none', border:'none', color:'#fff', fontSize:20, cursor:'pointer', fontWeight:900 }}>‹</button>
                 </div>
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', padding:'12px 8px 0', gap:4 }}>
-                  {(isAR?dayNamesAR:dayNamesEN).map(d=><div key={d} style={{ textAlign:'center', fontSize:11, fontWeight:700, color:'#8A8A8A', textTransform:'uppercase' }}>{d}</div>)}
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', padding:'12px 12px 0', gap:4 }}>
+                  {(isAR?dayNamesAR:dayNamesEN).map(d=><div key={d} style={{ textAlign:'center', fontSize:11, fontWeight:800, color:'#8A8A8A', textTransform:'uppercase', padding:'4px 0' }}>{d}</div>)}
                 </div>
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', padding:8, gap:4 }}>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', padding:12, gap:6 }}>
                   {renderCalendar()}
                 </div>
               </div>
 
-              {/* Legend */}
-              <div style={{ display:'flex', gap:24, flexWrap:'wrap', marginBottom:32 }}>
-                <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, fontWeight:600, color:'#1A1A1A' }}><span style={{ width:14, height:14, borderRadius:'50%', background:'#22c55e', display:'block' }} />{isAR?'متاح':'Available'}</div>
-                <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, fontWeight:600, color:'#1A1A1A' }}><span style={{ width:14, height:14, borderRadius:'50%', background:'#ef4444', display:'block' }} />{isAR?'محجوز':'Booked'}</div>
+              {/* Legend — redesigned prominent */}
+              <div style={{ display:'flex', gap:16, marginBottom:40, flexWrap:'wrap' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:10, background:'#dcfce7', border:'1px solid #22c55e', borderRadius:8, padding:'10px 18px', flex:1, justifyContent:'center' }}>
+                  <span style={{ width:16, height:16, borderRadius:'50%', background:'#22c55e', display:'block', flexShrink:0, boxShadow:'0 2px 8px rgba(34,197,94,0.5)' }} />
+                  <span style={{ fontSize:14, fontWeight:800, color:'#15803d' }}>{isAR?'✅ متاح للحجز':'✅ Available'}</span>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:10, background:'#fee2e2', border:'1px solid #ef4444', borderRadius:8, padding:'10px 18px', flex:1, justifyContent:'center' }}>
+                  <span style={{ width:16, height:16, borderRadius:'50%', background:'#ef4444', display:'block', flexShrink:0, boxShadow:'0 2px 8px rgba(239,68,68,0.5)' }} />
+                  <span style={{ fontSize:14, fontWeight:800, color:'#dc2626' }}>{isAR?'🚫 محجوز':'🚫 Booked'}</span>
+                </div>
               </div>
 
-              {/* Steps */}
-              {[
-                [isAR?'تحقق من التوفر':'Check Availability', isAR?'استخدم التقويم لمعرفة الفترات المتاحة':'Use the calendar to find available dates'],
-                [isAR?'أرسل طلب الحجز':'Send Booking Request', isAR?'أرسل لنا تواريخ إقامتك عبر واتساب':'Send us your dates via WhatsApp'],
-                [isAR?'ادفع عبر InstaPay':'Pay via InstaPay', isAR?`أرسل المبلغ على رقم 01159710758 ثم أرسل لقطة الشاشة`:`Send the amount to 01159710758 then send a screenshot`],
-                [isAR?'يُؤكَّد حجزك 🎉':'Booking Confirmed 🎉', isAR?'بعد التحقق من الدفع، نثبت حجزك فوراً':'After payment verification, your booking is locked in'],
-              ].map(([title, desc], i) => (
-                <div key={i} style={{ display:'flex', gap:20, padding:'20px 0', borderBottom:'1px solid #E8E5DF' }}>
-                  <div style={{ width:40, height:40, borderRadius:8, background:'#FFF7ED', display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, fontWeight:900, color:'#F97316', flexShrink:0, fontFamily:"'Tajawal',sans-serif" }}>{i+1}</div>
-                  <div>
-                    <h4 style={{ fontSize:16, fontWeight:800, color:'#0F0F0F', marginBottom:4 }}>{title}</h4>
-                    <p style={{ fontSize:14, color:'#6A6A6A', lineHeight:1.7 }}>{desc}</p>
-                  </div>
+              {/* ===== BOOKING STEPS — REDESIGNED ===== */}
+              <div style={{ background:'#fff', borderRadius:16, overflow:'hidden', border:'1px solid #E8E5DF', boxShadow:'0 4px 24px rgba(0,0,0,0.06)' }}>
+                <div style={{ background:'#0F0F0F', padding:'20px 24px' }}>
+                  <h3 style={{ fontSize:17, fontWeight:900, color:'#fff', fontFamily:"'Tajawal',sans-serif", margin:0 }}>
+                    {isAR?'كيف تحجز؟ ٤ خطوات بسيطة':'How to Book? 4 Simple Steps'}
+                  </h3>
                 </div>
-              ))}
+                {[
+                  { num:'1', icon:'📅', title: isAR?'اختر الفترة':'Choose Dates', desc: isAR?'تحقق من التقويم واختر تواريخ إقامتك من النموذج':'Check the calendar and select your stay dates from the form', color:'#F97316' },
+                  { num:'2', icon:'📲', title: isAR?'تواصل عبر واتساب':'Contact via WhatsApp', desc: isAR?'أرسل طلبك وسيتم إرسال تفاصيل الحجز تلقائياً':'Send your request — booking details will be sent automatically', color:'#25D366' },
+                  { num:'3', icon:'💸', title: isAR?'ادفع عبر InstaPay':'Pay via InstaPay', desc: isAR?'أرسل المبلغ على رقم 01159710758 وأرسل لقطة الشاشة':'Send amount to 01159710758 then send payment screenshot', color:'#3b82f6' },
+                  { num:'4', icon:'✅', title: isAR?'يُؤكَّد حجزك فوراً':'Booking Confirmed Instantly', desc: isAR?'بعد التحقق من الدفع يُثبَّت اسمك في التقويم':'After payment verification your name is locked in the calendar', color:'#8b5cf6' },
+                ].map((step, i) => (
+                  <div key={i} style={{ display:'flex', alignItems:'stretch', borderBottom: i < 3 ? '1px solid #E8E5DF' : 'none' }}>
+                    {/* Color bar */}
+                    <div style={{ width:6, background:step.color, flexShrink:0 }} />
+                    {/* Number circle */}
+                    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', width:64, flexShrink:0, background:'#FAFAF8', borderLeft:'1px solid #E8E5DF', borderRight:'1px solid #E8E5DF' }}>
+                      <div style={{ width:36, height:36, borderRadius:'50%', background:step.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:900, color:'#fff', fontFamily:"'Tajawal',sans-serif" }}>{step.num}</div>
+                    </div>
+                    {/* Content */}
+                    <div style={{ padding:'20px 20px', flex:1 }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+                        <span style={{ fontSize:20 }}>{step.icon}</span>
+                        <span style={{ fontSize:16, fontWeight:900, color:'#0F0F0F', fontFamily:"'Tajawal',sans-serif" }}>{step.title}</span>
+                      </div>
+                      <p style={{ fontSize:13, color:'#6A6A6A', lineHeight:1.7, margin:0 }}>{step.desc}</p>
+                    </div>
+                    {/* Arrow connector (not on last) */}
+                    {i < 3 && (
+                      <div style={{ display:'flex', alignItems:'center', paddingLeft:12, paddingRight:12, color:'#E8E5DF', fontSize:20, flexShrink:0 }}>›</div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Right: form */}
-            <div style={{ background:'#fff', border:'1px solid #E8E5DF', borderRadius:12, padding:'36px 28px' }}>
+            <div style={{ background:'#fff', border:'1px solid #E8E5DF', borderRadius:16, padding:'36px 28px', boxShadow:'0 4px 24px rgba(0,0,0,0.06)', position:'sticky', top:90 }}>
               <h3 style={{ fontSize:22, fontWeight:900, color:'#0F0F0F', marginBottom:28, fontFamily:"'Tajawal',sans-serif" }}>
                 {isAR?'احسب تكلفة إقامتك':'Calculate Your Stay Cost'}
               </h3>
@@ -492,9 +540,9 @@ export default function ChaletWebsite({ pricing, media, content }: Props) {
                 <div style={{ textAlign:'center', padding:'40px 20px' }}>
                   <div style={{ fontSize:48, marginBottom:16 }}>🎉</div>
                   <h4 style={{ fontSize:20, fontWeight:900, color:'#0F0F0F', marginBottom:8, fontFamily:"'Tajawal',sans-serif" }}>{isAR?'تم إرسال طلبك!':'Request Sent!'}</h4>
-                  <p style={{ fontSize:14, color:'#6A6A6A', lineHeight:1.8 }}>{isAR?'تم تسجيل طلبك. يرجى إكمال الدفع عبر واتساب لتأكيد الحجز.':'Your request is logged. Please complete payment via WhatsApp to confirm.'}</p>
-                  <a href={buildWALink()} target="_blank" style={{ display:'inline-flex', alignItems:'center', gap:8, marginTop:20, background:'#25D366', color:'#fff', padding:'14px 28px', borderRadius:6, fontWeight:800, textDecoration:'none' }}>
-                    <WAIcon />{isAR?'تواصل عبر واتساب':'Contact via WhatsApp'}
+                  <p style={{ fontSize:14, color:'#6A6A6A', lineHeight:1.8, marginBottom:20 }}>{isAR?'انتقل الآن لواتساب وأرسل لقطة شاشة الدفع لتأكيد حجزك.':'Now go to WhatsApp and send your payment screenshot to confirm.'}</p>
+                  <a href={buildWALink()} target="_blank" style={{ display:'inline-flex', alignItems:'center', gap:8, background:'#25D366', color:'#fff', padding:'14px 28px', borderRadius:8, fontWeight:800, textDecoration:'none', fontSize:15 }}>
+                    <WAIcon />{isAR?'فتح واتساب':'Open WhatsApp'}
                   </a>
                 </div>
               ) : (
@@ -506,12 +554,12 @@ export default function ChaletWebsite({ pricing, media, content }: Props) {
                     <input type="date" value={checkOut} onChange={e=>setCheckOut(e.target.value)} style={inputStyle} onFocus={e=>(e.target.style.borderColor='#F97316')} onBlur={e=>(e.target.style.borderColor='#E8E5DF')} />
                   </FormField>
                   {priceCalc && (
-                    <div style={{ background:'#FFF7ED', borderRadius:8, padding:20, marginBottom:20 }}>
+                    <div style={{ background:'#FFF7ED', borderRadius:12, padding:20, marginBottom:20, border:'1px solid rgba(249,115,22,0.2)' }}>
                       <div style={{ fontSize:12, fontWeight:700, color:'#F97316', letterSpacing:2, textTransform:'uppercase', marginBottom:12 }}>{isAR?'ملخص التكلفة':'COST SUMMARY'}</div>
-                      <div style={{ display:'flex', justifyContent:'space-between', fontSize:14, color:'#1A1A1A', marginBottom:8 }}><span>{isAR?'الليالي':'Nights'}</span><span>{priceCalc.nights}</span></div>
+                      <div style={{ display:'flex', justifyContent:'space-between', fontSize:14, color:'#1A1A1A', marginBottom:8 }}><span>{isAR?'الليالي':'Nights'}</span><span style={{ fontWeight:700 }}>{priceCalc.nights}</span></div>
                       <div style={{ display:'flex', justifyContent:'space-between', fontSize:14, color:'#1A1A1A', marginBottom:8 }}><span>{isAR?'أيام الأسبوع':'Weekdays'}</span><span>{priceCalc.weekdays} × {weekdayPrice.toLocaleString()}</span></div>
                       <div style={{ display:'flex', justifyContent:'space-between', fontSize:14, color:'#1A1A1A', marginBottom:8 }}><span>{isAR?'نهاية الأسبوع':'Weekend'}</span><span>{priceCalc.weekend} × {weekendPrice.toLocaleString()}</span></div>
-                      <div style={{ display:'flex', justifyContent:'space-between', fontSize:18, fontWeight:900, color:'#F97316', borderTop:'1px solid rgba(249,115,22,0.2)', paddingTop:12, marginTop:4 }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', fontSize:20, fontWeight:900, color:'#F97316', borderTop:'1px solid rgba(249,115,22,0.2)', paddingTop:12, marginTop:4 }}>
                         <span>{isAR?'الإجمالي':'Total'}</span>
                         <span>{priceCalc.total.toLocaleString()} {isAR?'جنيه':'EGP'}</span>
                       </div>
@@ -523,13 +571,26 @@ export default function ChaletWebsite({ pricing, media, content }: Props) {
                   <FormField label={isAR?'رقم الهاتف / واتساب':'Phone / WhatsApp'}>
                     <input type="tel" value={renterPhone} onChange={e=>setRenterPhone(e.target.value)} placeholder="01XXXXXXXXX" style={inputStyle} onFocus={e=>(e.target.style.borderColor='#F97316')} onBlur={e=>(e.target.style.borderColor='#E8E5DF')} />
                   </FormField>
+
+                  {/* InstaPay reminder */}
+                  <div style={{ background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:8, padding:'12px 16px', marginBottom:16, display:'flex', gap:10, alignItems:'flex-start' }}>
+                    <span style={{ fontSize:18, flexShrink:0 }}>💡</span>
+                    <p style={{ fontSize:13, color:'#166534', lineHeight:1.7, margin:0 }}>
+                      {isAR
+                        ? 'بعد الإرسال ستنتقل لواتساب — أرسل مبلغ الحجز على InstaPay رقم 01159710758 ثم أرسل لقطة شاشة لتأكيد حجزك.'
+                        : 'After sending you\'ll go to WhatsApp — pay via InstaPay to 01159710758 then send a screenshot to confirm your booking.'}
+                    </p>
+                  </div>
+
                   <button onClick={submitBooking} disabled={submitting} style={{
-                    width:'100%', background:'#25D366', color:'#fff', padding:16, border:'none', borderRadius:6,
+                    width:'100%', background:'#25D366', color:'#fff', padding:'16px', border:'none', borderRadius:8,
                     fontSize:16, fontWeight:800, cursor:'pointer', fontFamily:"'Cairo',sans-serif",
                     display:'flex', alignItems:'center', justifyContent:'center', gap:10,
                     opacity: submitting ? 0.7 : 1,
+                    boxShadow:'0 4px 20px rgba(37,211,102,0.4)',
+                    transition:'all 0.3s',
                   }}>
-                    <WAIcon />{submitting ? (isAR?'جاري الإرسال...':'Sending...') : (isAR?'تواصل عبر واتساب للحجز':'Contact via WhatsApp to Book')}
+                    <WAIcon />{submitting ? (isAR?'جاري الإرسال...':'Sending...') : (isAR?'أرسل طلب الحجز عبر واتساب':'Send Booking Request via WhatsApp')}
                   </button>
                 </>
               )}
@@ -550,7 +611,7 @@ export default function ChaletWebsite({ pricing, media, content }: Props) {
                 {isAR?'الدفع الآمن عبر InstaPay':'Secure Payment via InstaPay'}
               </h2>
               <p style={{ fontSize:15, color:'rgba(255,255,255,0.8)', lineHeight:1.9, marginBottom:28 }}>
-                {isAR?'بعد الاتفاق على الفترة، قم بإرسال المبلغ الكامل على الرقم أدناه، ثم أرسل لقطة شاشة عبر واتساب.':'Once dates are agreed, transfer the full amount to the number below, then send a payment screenshot via WhatsApp.'}
+                {isAR?'أرسل المبلغ الكامل على الرقم أدناه، ثم أرسل لقطة شاشة لتأكيد الدفع عبر واتساب.':'Transfer the full amount to the number below, then send a payment screenshot via WhatsApp.'}
               </p>
               <div style={{ display:'inline-flex', alignItems:'center', gap:12, background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.25)', borderRadius:8, padding:'16px 24px' }}>
                 <span style={{ fontSize:12, color:'rgba(255,255,255,0.6)', fontWeight:700, letterSpacing:2, textTransform:'uppercase' }}>{isAR?'رقم InstaPay':'INSTAPAY NUMBER'}</span>
@@ -561,37 +622,50 @@ export default function ChaletWebsite({ pricing, media, content }: Props) {
         </div>
       </section>
 
-      {/* ===== LOCATION ===== */}
+      {/* ===== LOCATION — REDESIGNED MAGAZINE ===== */}
       <section id="location" style={{ padding:'clamp(64px,10vw,120px) 0', background:'#FFFFFF' }}>
         <div className="container">
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))', gap:'clamp(32px,6vw,80px)', alignItems:'center' }}>
-            <div>
-              <SectionTag label={isAR?'الموقع':'LOCATION'} />
-              <h2 style={{ fontSize:'clamp(28px,3vw,44px)', fontWeight:900, color:'#0F0F0F', marginBottom:16, fontFamily:"'Tajawal',sans-serif" }}>
-                {isAR?'في قلب الساحل الشمالي':'In the Heart of the North Coast'}
-              </h2>
-              <p style={{ fontSize:16, color:'#6A6A6A', lineHeight:1.9, marginBottom:28 }}>
-                {isAR?'الصف الثاني على البحر مباشرةً — فتحة مفتوحة أمام الشاليه تمنحك إطلالة بحرية واسعة وواضحة.':'Second row directly on the shore — an open gap in front ensures a wide, clear sea view.'}
-              </p>
-              {[
-                [isAR?'الساحل الشمالي، مصر':'Sahel, North Coast, Egypt', isAR?'الصف الثاني على البحر':'Second row from shore'],
-                [isAR?'حمام سباحة مشترك':'Shared Pool', isAR?'دقيقة بالسيارة — ٥ دقائق مشياً':'1 min by car — 5 min walk'],
-                [isAR?'واي فاي':'WiFi', isAR?'متاح في الدور العلوي':'Available on upper floor'],
-              ].map(([title, sub], i) => (
-                <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:16, marginBottom:20 }}>
-                  <div style={{ width:44, height:44, borderRadius:10, background:'#FFF7ED', border:'1px solid #F3EDE3', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="#F97316"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          <div style={{ textAlign:'center', maxWidth:600, margin:'0 auto 64px' }}>
+            <SectionTag label={isAR?'الموقع':'LOCATION'} center />
+            <h2 style={{ fontSize:'clamp(32px,4vw,52px)', fontWeight:900, color:'#0F0F0F', fontFamily:"'Tajawal',sans-serif" }}>
+              {isAR?'في قلب الساحل الشمالي':'In the Heart of the North Coast'}
+            </h2>
+          </div>
+
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))', gap:'clamp(32px,6vw,64px)', alignItems:'start', marginBottom:64 }}>
+            {/* Location features — magazine style */}
+            {[
+              { num:'01', icon:'📍', title: isAR?'الساحل الشمالي، مصر':'Sahel, North Coast, Egypt', desc: isAR?'الصف الثاني على البحر مباشرةً — فتحة مفتوحة أمام الشاليه تمنحك إطلالة بحرية واسعة وواضحة بدون أي عائق.':'Second row directly on shore — an open gap in front ensures a wide, completely unobstructed sea view.', color:'#F97316', bg:'#FFF7ED' },
+              { num:'02', icon:'🏊', title: isAR?'حمام سباحة مشترك':'Shared Swimming Pool', desc: isAR?'حمام سباحة مشترك في القرية على بُعد دقيقة واحدة فقط بالسيارة أو ٥ دقائق سيراً على الأقدام.':'Shared pool in the village, just 1 minute by car or 5 minutes walking distance.', color:'#0ea5e9', bg:'#f0f9ff' },
+              { num:'03', icon:'📶', title: isAR?'خدمة واي فاي':'WiFi Service', desc: isAR?'خدمة الإنترنت متاحة في الدور العلوي للتواصل مع العالم الخارجي أثناء إقامتك.':'Internet service available on the upper floor to stay connected during your stay.', color:'#8b5cf6', bg:'#f5f3ff' },
+            ].map((item, i) => (
+              <div key={i} style={{ position:'relative' }}>
+                {/* Number tag */}
+                <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:20 }}>
+                  <div style={{ width:52, height:52, borderRadius:12, background:item.bg, border:`1px solid ${item.color}30`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0 }}>
+                    {item.icon}
                   </div>
-                  <div>
-                    <h4 style={{ fontSize:15, fontWeight:800, color:'#0F0F0F', marginBottom:3 }}>{title}</h4>
-                    <p style={{ fontSize:13, color:'#6A6A6A', lineHeight:1.6 }}>{sub}</p>
-                  </div>
+                  <div style={{ width:2, height:40, background:`linear-gradient(to bottom, ${item.color}, transparent)` }} />
+                  <span style={{ fontSize:11, fontWeight:800, color:item.color, letterSpacing:3, textTransform:'uppercase' }}>{item.num}</span>
                 </div>
-              ))}
-            </div>
-            <div style={{ borderRadius:12, overflow:'hidden', height:400 }}>
-              <iframe src="https://maps.google.com/maps?q=North+Coast+Egypt+Sahel&output=embed&z=10" width="100%" height="100%" style={{ border:'none' }} loading="lazy" />
-            </div>
+                <h3 style={{ fontSize:20, fontWeight:900, color:'#0F0F0F', marginBottom:10, fontFamily:"'Tajawal',sans-serif" }}>{item.title}</h3>
+                <p style={{ fontSize:15, color:'#6A6A6A', lineHeight:1.9, paddingRight: isAR ? 68 : 0, paddingLeft: !isAR ? 68 : 0 }}>{item.desc}</p>
+                {i < 2 && <div style={{ position:'absolute', bottom:-32, right: isAR ? 26 : 'auto', left: !isAR ? 26 : 'auto', fontSize:24, color:'#E8E5DF' }}>↓</div>}
+              </div>
+            ))}
+          </div>
+
+          {/* Map */}
+          <div style={{ borderRadius:16, overflow:'hidden', height:420, boxShadow:'0 8px 40px rgba(0,0,0,0.1)', border:'1px solid #E8E5DF' }}>
+            <iframe
+              src="https://maps.google.com/maps?q=31.1837,29.9553&output=embed&z=15"
+              width="100%" height="100%" style={{ border:'none' }} loading="lazy"
+            />
+          </div>
+          <div style={{ textAlign:'center', marginTop:20 }}>
+            <a href="https://maps.app.goo.gl/ct4KxCzPYHbvb6UN7" target="_blank" style={{ display:'inline-flex', alignItems:'center', gap:8, color:'#F97316', fontWeight:700, fontSize:15, textDecoration:'none', borderBottom:'2px solid #F97316', paddingBottom:4 }}>
+              📍 {isAR?'افتح الموقع في خرائط جوجل':'Open in Google Maps'}
+            </a>
           </div>
         </div>
       </section>
@@ -640,7 +714,7 @@ export default function ChaletWebsite({ pricing, media, content }: Props) {
             <div>
               <h4 style={{ fontSize:13, fontWeight:700, color:'rgba(255,255,255,0.5)', letterSpacing:2, textTransform:'uppercase', marginBottom:16 }}>{isAR?'روابط سريعة':'Quick Links'}</h4>
               {[['#about',isAR?'عن الشاليه':'About'],['#floors',isAR?'الطوابق':'Floors'],['#pricing',isAR?'الأسعار':'Pricing'],['#gallery',isAR?'الصور':'Gallery'],['#booking',isAR?'الحجز':'Booking']].map(([href,label])=>(
-                <a key={href} href={href} style={{ display:'block', fontSize:14, color:'rgba(255,255,255,0.7)', textDecoration:'none', marginBottom:10, transition:'color 0.3s' }}
+                <a key={href} href={href} style={{ display:'block', fontSize:14, color:'rgba(255,255,255,0.7)', textDecoration:'none', marginBottom:10 }}
                   onMouseEnter={e=>(e.currentTarget.style.color='#F97316')} onMouseLeave={e=>(e.currentTarget.style.color='rgba(255,255,255,0.7)')}>{label}</a>
               ))}
             </div>
@@ -672,7 +746,6 @@ export default function ChaletWebsite({ pricing, media, content }: Props) {
       }}>
         {isAR?'احجز الآن':'Book Now'}
       </a>
-
     </div>
   )
 }
@@ -688,29 +761,42 @@ function SectionTag({ label, dark, center }: { label: string; dark?: boolean; ce
   )
 }
 
-function FloorPanel({ isAR, tag, title, desc, features, image, placeholder }: {
-  isAR: boolean; tag: string; title: string; desc: string; features: string[]; image?: string; placeholder: string
+function MagazineFloor({ isAR, number, tag, title, subtitle, desc, features, image, placeholder, color }: {
+  isAR: boolean; number: string; tag: string; title: string; subtitle: string; desc: string;
+  features: { icon: string; title: string; desc: string }[]; image?: string; placeholder: string; color: string
 }) {
   return (
-    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))', gap:32, alignItems:'start' }}>
+    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))', gap:48, alignItems:'center' }}>
       <div>
-        <SectionTag label={tag} />
-        <h3 style={{ fontSize:'clamp(24px,3vw,36px)', fontWeight:900, color:'#0F0F0F', marginBottom:12, fontFamily:"'Tajawal',sans-serif" }}>{title}</h3>
-        <p style={{ fontSize:15, color:'#6A6A6A', lineHeight:1.9, marginBottom:24 }}>{desc}</p>
-        <ul style={{ listStyle:'none', display:'flex', flexDirection:'column', gap:14 }}>
-          {features.map((f,i) => (
-            <li key={i} style={{ display:'flex', alignItems:'flex-start', gap:14, fontSize:15, color:'#1A1A1A', lineHeight:1.7 }}>
-              <span style={{ width:8, height:8, background:'#F97316', borderRadius:'50%', flexShrink:0, marginTop:8, display:'block' }} />
-              {f}
-            </li>
+        <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:28 }}>
+          <div style={{ fontFamily:"'Tajawal',sans-serif", fontSize:64, fontWeight:900, color:'#F97316', opacity:0.15, lineHeight:1 }}>{number}</div>
+          <div>
+            <div style={{ fontSize:11, fontWeight:700, color:'#F97316', letterSpacing:3, textTransform:'uppercase', marginBottom:4 }}>{tag}</div>
+            <h3 style={{ fontSize:'clamp(24px,3vw,36px)', fontWeight:900, color:'#0F0F0F', fontFamily:"'Tajawal',sans-serif", lineHeight:1.1 }}>{title}</h3>
+            <div style={{ fontSize:15, color:'#8A8A8A', fontWeight:600, marginTop:4 }}>{subtitle}</div>
+          </div>
+        </div>
+        <p style={{ fontSize:16, color:'#6A6A6A', lineHeight:1.9, marginBottom:32, borderRight: isAR ? '3px solid #F97316' : 'none', borderLeft: !isAR ? '3px solid #F97316' : 'none', paddingRight: isAR ? 20 : 0, paddingLeft: !isAR ? 20 : 0 }}>{desc}</p>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:12 }}>
+          {features.map((f, i) => (
+            <div key={i} style={{ background:color, borderRadius:10, padding:'16px 18px', display:'flex', gap:12, alignItems:'flex-start' }}>
+              <span style={{ fontSize:22, flexShrink:0 }}>{f.icon}</span>
+              <div>
+                <div style={{ fontSize:14, fontWeight:800, color:'#0F0F0F', marginBottom:3 }}>{f.title}</div>
+                <div style={{ fontSize:13, color:'#6A6A6A', lineHeight:1.5 }}>{f.desc}</div>
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
       </div>
-      <div style={{ borderRadius:12, overflow:'hidden', minHeight:360, background:'linear-gradient(135deg,#f0ece6,#e8e2d8)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ borderRadius:16, overflow:'hidden', minHeight:400, background:'linear-gradient(135deg,#f0ece6,#e8e2d8)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
         {image ? (
           <img src={image} alt={title} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
         ) : (
-          <span style={{ fontSize:13, color:'#8A8A8A', fontWeight:600 }}>{placeholder}</span>
+          <div style={{ textAlign:'center', padding:40 }}>
+            <div style={{ fontSize:48, marginBottom:12, opacity:0.3 }}>📷</div>
+            <span style={{ fontSize:14, color:'#8A8A8A', fontWeight:600 }}>{placeholder}</span>
+          </div>
         )}
       </div>
     </div>
