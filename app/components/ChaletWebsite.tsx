@@ -190,7 +190,7 @@ export default function ChaletWebsite({ pricing: ip, media: im, content: ic }: P
       cells.push(
         <div key={d} style={{
           aspectRatio:'1', display:'flex', alignItems:'center', justifyContent:'center',
-          borderRadius:8, fontSize:13, fontWeight:700,
+          borderRadius:8, fontSize:12, fontWeight:700,
           background: booked ? '#ef4444' : '#22c55e',
           color:'#fff',
           outline: isToday ? '3px solid #F97316' : 'none',
@@ -198,7 +198,6 @@ export default function ChaletWebsite({ pricing: ip, media: im, content: ic }: P
           boxShadow: booked ? '0 2px 6px rgba(239,68,68,0.35)' : '0 2px 6px rgba(34,197,94,0.25)',
           cursor: booked ? 'not-allowed' : 'default',
           transition:'transform 0.15s',
-          fontSize: '12px',
         }}
           onMouseEnter={e=>{ if (!booked)(e.currentTarget as HTMLElement).style.transform='scale(1.12)' }}
           onMouseLeave={e=>{ (e.currentTarget as HTMLElement).style.transform='scale(1)' }}
