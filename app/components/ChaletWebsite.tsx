@@ -410,7 +410,7 @@ export default function ChaletWebsite({ pricing: ip, media: im, content: ic }: P
       </section>
 
       {/* Lightbox */}
-      {lightbox && <Lightbox images={lightbox.images} startIndex={lightbox.index} onClose={()=>setLightbox(null)} />
+      {lightbox && <Lightbox images={lightbox.images} startIndex={lightbox.index} onClose={()=>setLightbox(null)} />}
 
       {/* PRICING — dark redesign */}
       <section id="pricing" style={{ padding:'clamp(64px,10vw,120px) 0', background:'#0F0F0F' }}>
