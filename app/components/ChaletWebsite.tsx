@@ -28,6 +28,7 @@ export default function ChaletWebsite({ pricing: ip, media: im, content: ic }: P
   const [pricing, setPricing] = useState<Pricing[]>(ip)
   const [media, setMedia] = useState<Media[]>(im)
   const [content, setContent] = useState<Content[]>(ic)
+  const [lightbox, setLightbox] = useState<{images:string[], index:number}|null>(null)
 
   useEffect(() => {
     const fetch = async () => {
@@ -414,18 +415,26 @@ export default function ChaletWebsite({ pricing: ip, media: im, content: ic }: P
               {t('gallery_title','لقطات من الشاليه','A Glimpse Inside')}
             </h2>
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr', gridTemplateRows:'280px 280px', gap:12 }}>
+
+          {/* Gallery grid — show first 5, with "view all" */}
+          <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr', gridTemplateRows:'280px 280px', gap:12, marginBottom:20 }}>
             {(galleryImages.length>0?galleryImages:[
-              {url:'https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?w=800&q=80'},
-              {url:'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&q=80'},
-              {url:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80'},
-              {url:''},{url:''},
+              {url:'https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?w=800&q=80', id:'d1'},
+              {url:'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&q=80', id:'d2'},
+              {url:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80', id:'d3'},
+              {url:'', id:'d4'},{url:'', id:'d5'},
             ] as any[]).slice(0,5).map((img:any,i:number)=>(
-              <div key={i} style={{ gridRow:i===0?'span 2':'span 1', overflow:'hidden', borderRadius:8, background:'#f0ece6' }}>
+              <div key={img.id||i} onClick={()=>img.url&&setLightbox({images: galleryImages.length>0?galleryImages.map((m:any)=>m.url):[], index:i})}
+                style={{ gridRow:i===0?'span 2':'span 1', overflow:'hidden', borderRadius:8, background:'#f0ece6', cursor:img.url?'pointer':'default', position:'relative' }}>
                 {img.url?(
-                  <img src={img.url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.6s' }}
-                    onMouseEnter={e=>e.currentTarget.style.transform='scale(1.05)'}
-                    onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'} />
+                  <>
+                    <img src={img.url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.6s' }}
+                      onMouseEnter={e=>{ e.currentTarget.style.transform='scale(1.05)'; (e.currentTarget.nextSibling as HTMLElement).style.opacity='1' }}
+                      onMouseLeave={e=>{ e.currentTarget.style.transform='scale(1)'; (e.currentTarget.nextSibling as HTMLElement).style.opacity='0' }} />
+                    <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.35)', display:'flex', alignItems:'center', justifyContent:'center', opacity:0, transition:'opacity 0.3s', pointerEvents:'none' }}>
+                      <span style={{ color:'#fff', fontSize:32 }}>🔍</span>
+                    </div>
+                  </>
                 ):(
                   <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(135deg,#f0ece6,#e8e2d8)' }}>
                     <span style={{ fontSize:12, color:'#8A8A8A', fontWeight:600 }}>{isAR?'صور قادمة':'Photos coming soon'}</span>
@@ -434,7 +443,27 @@ export default function ChaletWebsite({ pricing: ip, media: im, content: ic }: P
               </div>
             ))}
           </div>
+
+          {/* Floor album buttons */}
+          {(floorImages.ground.length>0 || floorImages.upper.length>0 || floorImages.roof.length>0) && (
+            <div style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap', marginTop:24 }}>
+              <p style={{ width:'100%', textAlign:'center', fontSize:14, color:'#8A8A8A', marginBottom:8 }}>{isAR?'عرض ألبوم كل طابق:':'View full album per floor:'}</p>
+              {[
+                { key:'floor_ground', label:isAR?'📷 الدور الأرضي':'📷 Ground Floor', imgs:floorImages.ground, color:'#0ea5e9' },
+                { key:'floor_upper', label:isAR?'📷 الدور العلوي':'📷 Upper Floor', imgs:floorImages.upper, color:'#F97316' },
+                { key:'roof', label:isAR?'📷 السطح':'📷 Rooftop', imgs:floorImages.roof, color:'#8b5cf6' },
+              ].filter(a=>a.imgs.length>0).map(album=>(
+                <button key={album.key} onClick={()=>setLightbox({images:album.imgs.map((m:any)=>m.url), index:0})}
+                  style={{ padding:'12px 22px', background:'#fff', border:`1.5px solid ${album.color}`, borderRadius:8, color:album.color, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:"'Cairo',sans-serif", display:'flex', alignItems:'center', gap:8 }}>
+                  {album.label} <span style={{ background:`${album.color}20`, borderRadius:20, padding:'2px 8px', fontSize:12 }}>{album.imgs.length}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
+
+        {/* Lightbox */}
+        {lightbox && <Lightbox images={lightbox.images} startIndex={lightbox.index} onClose={()=>setLightbox(null)} />}
       </section>
 
       {/* PRICING — dark redesign */}
@@ -466,7 +495,7 @@ export default function ChaletWebsite({ pricing: ip, media: im, content: ic }: P
               <div style={{ fontSize:15, color:'rgba(255,255,255,0.85)', marginBottom:16 }}>
                 {getPrice('upper','weekend').toLocaleString()} {isAR?'جنيه/ليلة (نهاية الأسبوع)':'EGP/night (weekends)'}
               </div>
-              <a href="#booking" style={{ display:'inline-block', background:'rgba(255,255,255,0.2)', color:'#fff', padding:'10px 22px', borderRadius:6, fontSize:13, fontWeight:700, textDecoration:'none' }}>{isAR?'احجز الدور العلوي':'Book Upper Floor'}</a>
+              <button onClick={()=>{ setSelectedFloor('upper'); document.getElementById('booking')?.scrollIntoView({behavior:'smooth'}) }} style={{ display:'inline-block', background:'rgba(255,255,255,0.2)', color:'#fff', padding:'10px 22px', borderRadius:6, fontSize:13, fontWeight:700, border:'none', cursor:'pointer', fontFamily:"'Cairo',sans-serif" }}>{isAR?'احجز الدور العلوي':'Book Upper Floor'}</button>
             </div>
 
             {/* Ground Floor */}
@@ -480,7 +509,7 @@ export default function ChaletWebsite({ pricing: ip, media: im, content: ic }: P
               <div style={{ fontSize:15, color:'rgba(255,255,255,0.6)', marginBottom:16 }}>
                 {getPrice('ground','weekend').toLocaleString()} {isAR?'جنيه/ليلة (نهاية الأسبوع)':'EGP/night (weekends)'}
               </div>
-              <a href="#booking" style={{ display:'inline-block', background:'rgba(249,115,22,0.2)', color:'#F97316', padding:'10px 22px', borderRadius:6, fontSize:13, fontWeight:700, textDecoration:'none', border:'1px solid rgba(249,115,22,0.4)' }}>{isAR?'احجز الدور الأرضي':'Book Ground Floor'}</a>
+              <button onClick={()=>{ setSelectedFloor('ground'); document.getElementById('booking')?.scrollIntoView({behavior:'smooth'}) }} style={{ display:'inline-block', background:'rgba(249,115,22,0.2)', color:'#F97316', padding:'10px 22px', borderRadius:6, fontSize:13, fontWeight:700, textDecoration:'none', border:'1px solid rgba(249,115,22,0.4)', cursor:'pointer', fontFamily:"'Cairo',sans-serif" }}>{isAR?'احجز الدور الأرضي':'Book Ground Floor'}</button>
             </div>
 
             {/* Full Chalet */}
@@ -494,7 +523,7 @@ export default function ChaletWebsite({ pricing: ip, media: im, content: ic }: P
               <div style={{ fontSize:15, color:'rgba(255,255,255,0.6)', marginBottom:16 }}>
                 {(getPrice('upper','weekend')+getPrice('ground','weekend')).toLocaleString()} {isAR?'جنيه/ليلة (نهاية الأسبوع)':'EGP/night (weekends)'}
               </div>
-              <a href="#booking" style={{ display:'inline-block', background:'rgba(139,92,246,0.2)', color:'#a78bfa', padding:'10px 22px', borderRadius:6, fontSize:13, fontWeight:700, textDecoration:'none', border:'1px solid rgba(139,92,246,0.4)' }}>{isAR?'احجز الشاليه كامل':'Book Full Chalet'}</a>
+              <button onClick={()=>{ setSelectedFloor('full'); document.getElementById('booking')?.scrollIntoView({behavior:'smooth'}) }} style={{ display:'inline-block', background:'rgba(139,92,246,0.2)', color:'#a78bfa', padding:'10px 22px', borderRadius:6, fontSize:13, fontWeight:700, textDecoration:'none', border:'1px solid rgba(139,92,246,0.4)', cursor:'pointer', fontFamily:"'Cairo',sans-serif" }}>{isAR?'احجز الشاليه كامل':'Book Full Chalet'}</button>
             </div>
           </div>
         </div>
@@ -575,28 +604,23 @@ export default function ChaletWebsite({ pricing: ip, media: im, content: ic }: P
                 </div>
               </div>
 
-              {/* Steps */}
-              <div style={{ background:'#fff', borderRadius:16, overflow:'hidden', border:'1px solid #E8E5DF', boxShadow:'0 4px 24px rgba(0,0,0,0.06)' }}>
-                <div style={{ background:'#0F0F0F', padding:'18px 24px' }}>
-                  <h3 style={{ fontSize:16, fontWeight:900, color:'#fff', fontFamily:"'Tajawal',sans-serif", margin:0 }}>{isAR?'كيف تحجز؟ ٤ خطوات':'How to Book? 4 Steps'}</h3>
-                </div>
+              {/* Steps — magazine style */}
+              <div style={{ marginTop:8 }}>
+                <div style={{ fontSize:13, fontWeight:800, color:'#0F0F0F', marginBottom:16, fontFamily:"'Tajawal',sans-serif" }}>{isAR?'كيف تحجز؟':'How to Book?'}</div>
                 {[
-                  { num:'1', icon:'🏠', title:isAR?'اختر الوحدة':'Choose Unit', desc:isAR?'الدور الأرضي، العلوي، أو الشاليه كامل':'Ground, upper, or full chalet', color:'#F97316' },
-                  { num:'2', icon:'📅', title:isAR?'تحقق من التوفر':'Check Availability', desc:isAR?'راجع التقويم واختر تواريخ إقامتك':'Check the calendar and pick your dates', color:'#0ea5e9' },
-                  { num:'3', icon:'💸', title:isAR?'ادفع عبر InstaPay':'Pay via InstaPay', desc:isAR?'أرسل المبلغ على 01159710758 ثم أرسل لقطة الشاشة':'Send amount to 01159710758 then send screenshot', color:'#22c55e' },
-                  { num:'4', icon:'✅', title:isAR?'يُؤكَّد حجزك':'Booking Confirmed', desc:isAR?'بعد التحقق من الدفع يُثبَّت اسمك في التقويم':'After payment verification your dates are locked', color:'#8b5cf6' },
+                  { num:'01', title:isAR?'اختر الوحدة':'Choose Unit', desc:isAR?'الدور الأرضي، العلوي، أو الشاليه كامل':'Ground, upper floor, or full chalet', color:'#F97316', bg:'#FFF7ED' },
+                  { num:'02', title:isAR?'تحقق من التوفر':'Check Availability', desc:isAR?'راجع التقويم واختر تواريخ إقامتك':'Review the calendar and pick your dates', color:'#0ea5e9', bg:'#f0f9ff' },
+                  { num:'03', title:isAR?'ادفع عبر InstaPay':'Pay via InstaPay', desc:isAR?'أرسل المبلغ على 01159710758 ثم أرسل لقطة الشاشة':'Send amount to 01159710758 then send screenshot', color:'#22c55e', bg:'#f0fdf4' },
+                  { num:'04', title:isAR?'يُؤكَّد حجزك':'Booking Confirmed', desc:isAR?'بعد التحقق من الدفع يُثبَّت اسمك فوراً':'After payment check your name is locked instantly', color:'#8b5cf6', bg:'#f5f3ff' },
                 ].map((step,i)=>(
-                  <div key={i} style={{ display:'flex', alignItems:'stretch', borderBottom:i<3?'1px solid #E8E5DF':'none' }}>
-                    <div style={{ width:5, background:step.color, flexShrink:0 }} />
-                    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', width:60, flexShrink:0, background:'#FAFAF8', borderLeft:'1px solid #E8E5DF', borderRight:'1px solid #E8E5DF' }}>
-                      <div style={{ width:32, height:32, borderRadius:'50%', background:step.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, fontWeight:900, color:'#fff', fontFamily:"'Tajawal',sans-serif" }}>{step.num}</div>
+                  <div key={i} style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:0, marginBottom: i<3?0:0 }}>
+                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center' }}>
+                      <div style={{ width:44, height:44, borderRadius:12, background:step.bg, border:`1.5px solid ${step.color}30`, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'Tajawal',sans-serif", fontSize:14, fontWeight:900, color:step.color, flexShrink:0 }}>{step.num}</div>
+                      {i<3 && <div style={{ width:2, height:28, background:`linear-gradient(to bottom,${step.color}40,transparent)` }} />}
                     </div>
-                    <div style={{ padding:'18px 16px', flex:1 }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
-                        <span style={{ fontSize:18 }}>{step.icon}</span>
-                        <span style={{ fontSize:15, fontWeight:900, color:'#0F0F0F', fontFamily:"'Tajawal',sans-serif" }}>{step.title}</span>
-                      </div>
-                      <p style={{ fontSize:12, color:'#6A6A6A', lineHeight:1.6, margin:0 }}>{step.desc}</p>
+                    <div style={{ padding:'0 0 28px 16px' }}>
+                      <div style={{ fontSize:15, fontWeight:900, color:'#0F0F0F', fontFamily:"'Tajawal',sans-serif", marginBottom:4, borderRight: isAR?`3px solid ${step.color}`:'none', borderLeft:!isAR?`3px solid ${step.color}`:'none', paddingRight:isAR?12:0, paddingLeft:!isAR?12:0 }}>{step.title}</div>
+                      <div style={{ fontSize:13, color:'#6A6A6A', lineHeight:1.7 }}>{step.desc}</div>
                     </div>
                   </div>
                 ))}
@@ -687,10 +711,14 @@ export default function ChaletWebsite({ pricing: ip, media: im, content: ic }: P
                 {t('payment_desc','أرسل المبلغ الكامل على الرقم أدناه، ثم أرسل لقطة شاشة لتأكيد الدفع.','Transfer the full amount to the number below, then send a payment screenshot via WhatsApp.')}
               </p>
               <div style={{ display:'inline-flex', alignItems:'center', gap:16, background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.25)', borderRadius:10, padding:'18px 28px' }}>
-                <span style={{ fontSize:12, color:'rgba(255,255,255,0.55)', fontWeight:700, letterSpacing:2, textTransform:'uppercase' }}>{isAR?'رقم InstaPay':'INSTAPAY'}</span>
-                <span style={{ fontSize:'clamp(20px,3vw,30px)', fontWeight:900, color:'#fff', fontFamily:"'Tajawal',sans-serif", letterSpacing:1 }}>
-                  {t('instapay_number','01159710758','01159710758')}
-                </span>
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/InstaPay_logo.svg/320px-InstaPay_logo.svg.png" alt="InstaPay" style={{ height:32, objectFit:'contain', filter:'brightness(0) invert(1)' }} onError={e=>{e.currentTarget.style.display='none'}} />
+                <div style={{ width:'1px', height:32, background:'rgba(255,255,255,0.2)' }} />
+                <div>
+                  <div style={{ fontSize:11, color:'rgba(255,255,255,0.55)', fontWeight:700, letterSpacing:2, textTransform:'uppercase', marginBottom:4 }}>{isAR?'رقم InstaPay':'INSTAPAY NUMBER'}</div>
+                  <span style={{ fontSize:'clamp(20px,3vw,30px)', fontWeight:900, color:'#fff', fontFamily:"'Tajawal',sans-serif", letterSpacing:1 }}>
+                    {t('instapay_number','01159710758','01159710758')}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -917,4 +945,33 @@ function WAIcon({ size=22, color='#fff' }: { size?:number; color?:string }) {
 const IS: React.CSSProperties = {
   width:'100%', padding:'12px 14px', border:'1.5px solid #E8E5DF', borderRadius:6,
   fontSize:14, fontFamily:"'Cairo',sans-serif", color:'#1A1A1A', background:'#fff', outline:'none', transition:'border 0.2s',
+}
+
+function Lightbox({ images, startIndex, onClose }: { images:string[]; startIndex:number; onClose:()=>void }) {
+  const [idx, setIdx] = useState(startIndex)
+  useEffect(() => {
+    const handler = (e:KeyboardEvent) => {
+      if (e.key==='Escape') onClose()
+      if (e.key==='ArrowLeft') setIdx(i=>i>0?i-1:images.length-1)
+      if (e.key==='ArrowRight') setIdx(i=>i<images.length-1?i+1:0)
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [images.length, onClose])
+
+  return (
+    <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.92)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div onClick={e=>e.stopPropagation()} style={{ position:'relative', maxWidth:'90vw', maxHeight:'90vh' }}>
+        <img src={images[idx]} alt="" style={{ maxWidth:'90vw', maxHeight:'85vh', objectFit:'contain', borderRadius:8, boxShadow:'0 32px 80px rgba(0,0,0,0.8)' }} />
+        {/* Close */}
+        <button onClick={onClose} style={{ position:'absolute', top:-16, right:-16, width:36, height:36, borderRadius:'50%', background:'rgba(255,255,255,0.15)', border:'none', color:'#fff', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
+        {/* Prev */}
+        {images.length>1 && <button onClick={()=>setIdx(i=>i>0?i-1:images.length-1)} style={{ position:'absolute', top:'50%', left:-52, transform:'translateY(-50%)', width:40, height:40, borderRadius:'50%', background:'rgba(255,255,255,0.15)', border:'none', color:'#fff', fontSize:22, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>‹</button>}
+        {/* Next */}
+        {images.length>1 && <button onClick={()=>setIdx(i=>i<images.length-1?i+1:0)} style={{ position:'absolute', top:'50%', right:-52, transform:'translateY(-50%)', width:40, height:40, borderRadius:'50%', background:'rgba(255,255,255,0.15)', border:'none', color:'#fff', fontSize:22, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>›</button>}
+        {/* Counter */}
+        <div style={{ position:'absolute', bottom:-36, left:'50%', transform:'translateX(-50%)', color:'rgba(255,255,255,0.5)', fontSize:13, fontWeight:600 }}>{idx+1} / {images.length}</div>
+      </div>
+    </div>
+  )
 }
