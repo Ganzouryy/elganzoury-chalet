@@ -359,9 +359,10 @@ export default function ChaletWebsite({ pricing: ip, media: im, content: ic }: P
               ]}
               price={`${getPrice('ground','weekday').toLocaleString()} — ${getPrice('ground','weekend').toLocaleString()}`}
               priceLabel={isAR?'جنيه / ليلة (أيام عادية — نهاية أسبوع)':'EGP/night (weekday — weekend)'}
-              image={floorImages.ground[0]?.url}
+              images={floorImages.ground.map(m=>m.url)}
               placeholder={isAR?'صورة الدور الأرضي — قريباً':'Ground floor photo coming soon'}
               accentColor="#0ea5e9"
+              onLightbox={imgs=>setLightbox({images:imgs,index:0})}
             />
           )}
           {activeFloor === 'upper' && (
@@ -380,9 +381,10 @@ export default function ChaletWebsite({ pricing: ip, media: im, content: ic }: P
               ]}
               price={`${getPrice('upper','weekday').toLocaleString()} — ${getPrice('upper','weekend').toLocaleString()}`}
               priceLabel={isAR?'جنيه / ليلة (أيام عادية — نهاية أسبوع)':'EGP/night (weekday — weekend)'}
-              image={floorImages.upper[0]?.url}
+              images={floorImages.upper.map(m=>m.url)}
               placeholder={isAR?'صورة الدور العلوي — قريباً':'Upper floor photo coming soon'}
               accentColor="#F97316"
+              onLightbox={imgs=>setLightbox({images:imgs,index:0})}
             />
           )}
           {activeFloor === 'roof' && (
@@ -398,73 +400,17 @@ export default function ChaletWebsite({ pricing: ip, media: im, content: ic }: P
               ]}
               price=""
               priceLabel={isAR?'متاح ضمن حجز أي دور':'Available with any floor booking'}
-              image={floorImages.roof[0]?.url}
+              images={floorImages.roof.map(m=>m.url)}
               placeholder={isAR?'صورة السطح — قريباً':'Rooftop photo coming soon'}
               accentColor="#8b5cf6"
+              onLightbox={imgs=>setLightbox({images:imgs,index:0})}
             />
           )}
         </div>
       </section>
 
-      {/* GALLERY */}
-      <section id="gallery" style={{ padding:'clamp(64px,10vw,120px) 0', background:'#FAFAF8' }}>
-        <div className="container">
-          <div style={{ textAlign:'center', maxWidth:560, margin:'0 auto 48px' }}>
-            <SecTag label={isAR?'معرض الصور':'GALLERY'} center />
-            <h2 style={{ fontSize:'clamp(32px,4vw,52px)', fontWeight:900, color:'#0F0F0F', fontFamily:"'Tajawal',sans-serif" }}>
-              {t('gallery_title','لقطات من الشاليه','A Glimpse Inside')}
-            </h2>
-          </div>
-
-          {/* Gallery grid — show first 5, with "view all" */}
-          <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr', gridTemplateRows:'280px 280px', gap:12, marginBottom:20 }}>
-            {(galleryImages.length>0?galleryImages:[
-              {url:'https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?w=800&q=80', id:'d1'},
-              {url:'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&q=80', id:'d2'},
-              {url:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80', id:'d3'},
-              {url:'', id:'d4'},{url:'', id:'d5'},
-            ] as any[]).slice(0,5).map((img:any,i:number)=>(
-              <div key={img.id||i} onClick={()=>img.url&&setLightbox({images: galleryImages.length>0?galleryImages.map((m:any)=>m.url):[], index:i})}
-                style={{ gridRow:i===0?'span 2':'span 1', overflow:'hidden', borderRadius:8, background:'#f0ece6', cursor:img.url?'pointer':'default', position:'relative' }}>
-                {img.url?(
-                  <>
-                    <img src={img.url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.6s' }}
-                      onMouseEnter={e=>{ e.currentTarget.style.transform='scale(1.05)'; (e.currentTarget.nextSibling as HTMLElement).style.opacity='1' }}
-                      onMouseLeave={e=>{ e.currentTarget.style.transform='scale(1)'; (e.currentTarget.nextSibling as HTMLElement).style.opacity='0' }} />
-                    <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.35)', display:'flex', alignItems:'center', justifyContent:'center', opacity:0, transition:'opacity 0.3s', pointerEvents:'none' }}>
-                      <span style={{ color:'#fff', fontSize:32 }}>🔍</span>
-                    </div>
-                  </>
-                ):(
-                  <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(135deg,#f0ece6,#e8e2d8)' }}>
-                    <span style={{ fontSize:12, color:'#8A8A8A', fontWeight:600 }}>{isAR?'صور قادمة':'Photos coming soon'}</span>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Floor album buttons */}
-          {(floorImages.ground.length>0 || floorImages.upper.length>0 || floorImages.roof.length>0) && (
-            <div style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap', marginTop:24 }}>
-              <p style={{ width:'100%', textAlign:'center', fontSize:14, color:'#8A8A8A', marginBottom:8 }}>{isAR?'عرض ألبوم كل طابق:':'View full album per floor:'}</p>
-              {[
-                { key:'floor_ground', label:isAR?'📷 الدور الأرضي':'📷 Ground Floor', imgs:floorImages.ground, color:'#0ea5e9' },
-                { key:'floor_upper', label:isAR?'📷 الدور العلوي':'📷 Upper Floor', imgs:floorImages.upper, color:'#F97316' },
-                { key:'roof', label:isAR?'📷 السطح':'📷 Rooftop', imgs:floorImages.roof, color:'#8b5cf6' },
-              ].filter(a=>a.imgs.length>0).map(album=>(
-                <button key={album.key} onClick={()=>setLightbox({images:album.imgs.map((m:any)=>m.url), index:0})}
-                  style={{ padding:'12px 22px', background:'#fff', border:`1.5px solid ${album.color}`, borderRadius:8, color:album.color, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:"'Cairo',sans-serif", display:'flex', alignItems:'center', gap:8 }}>
-                  {album.label} <span style={{ background:`${album.color}20`, borderRadius:20, padding:'2px 8px', fontSize:12 }}>{album.imgs.length}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Lightbox */}
-        {lightbox && <Lightbox images={lightbox.images} startIndex={lightbox.index} onClose={()=>setLightbox(null)} />}
-      </section>
+      {/* Lightbox */}
+      {lightbox && <Lightbox images={lightbox.images} startIndex={lightbox.index} onClose={()=>setLightbox(null)} />
 
       {/* PRICING — dark redesign */}
       <section id="pricing" style={{ padding:'clamp(64px,10vw,120px) 0', background:'#0F0F0F' }}>
@@ -849,32 +795,38 @@ function SecTag({ label, dark, center }: { label:string; dark?:boolean; center?:
   )
 }
 
-function MagazineFloor({ isAR, number, tag, title, subtitle, desc, features, price, priceLabel, image, placeholder, accentColor }: {
+function MagazineFloor({ isAR, number, tag, title, subtitle, desc, features, price, priceLabel, images, placeholder, accentColor, onLightbox }: {
   isAR:boolean; number:string; tag:string; title:string; subtitle:string; desc:string;
   features:{title:string;desc:string}[]; price:string; priceLabel:string;
-  image?:string; placeholder:string; accentColor:string
+  images:string[]; placeholder:string; accentColor:string;
+  onLightbox:(imgs:string[])=>void;
 }) {
+  const [imgIdx, setImgIdx] = useState(0)
+  const [hovered, setHovered] = useState(false)
+  const hasImages = images.length > 0
+  const currentImg = hasImages ? images[imgIdx] : null
+
   return (
     <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))', gap:48, alignItems:'center' }}>
       <div>
         <div style={{ display:'flex', alignItems:'flex-start', gap:20, marginBottom:28 }}>
           <div style={{ fontFamily:"'Tajawal',sans-serif", fontSize:72, fontWeight:900, color:accentColor, opacity:0.12, lineHeight:1, flexShrink:0 }}>{number}</div>
           <div>
-            <div style={{ fontSize:11, fontWeight:700, color:accentColor, letterSpacing:3, textTransform:'uppercase', marginBottom:6 }}>{tag}</div>
+            <div style={{ fontSize:12, fontWeight:700, color:accentColor, letterSpacing:3, textTransform:'uppercase', marginBottom:6 }}>{tag}</div>
             <h3 style={{ fontSize:'clamp(26px,3vw,38px)', fontWeight:900, color:'#0F0F0F', fontFamily:"'Tajawal',sans-serif", lineHeight:1.1, marginBottom:4 }}>{title}</h3>
-            <div style={{ fontSize:14, color:'#8A8A8A', fontWeight:600 }}>{subtitle}</div>
+            <div style={{ fontSize:15, color:'#8A8A8A', fontWeight:600 }}>{subtitle}</div>
           </div>
         </div>
-        <p style={{ fontSize:15, color:'#6A6A6A', lineHeight:1.9, marginBottom:28, borderRight:isAR?`3px solid ${accentColor}`:'none', borderLeft:!isAR?`3px solid ${accentColor}`:'none', paddingRight:isAR?20:0, paddingLeft:!isAR?20:0 }}>{desc}</p>
+        <p style={{ fontSize:16, color:'#4A4A4A', lineHeight:1.9, marginBottom:28, borderRight:isAR?`3px solid ${accentColor}`:'none', borderLeft:!isAR?`3px solid ${accentColor}`:'none', paddingRight:isAR?20:0, paddingLeft:!isAR?20:0 }}>{desc}</p>
 
-        {/* Magazine rows — bold with colored left border */}
+        {/* Magazine feature rows — bigger fonts */}
         <div style={{ display:'flex', flexDirection:'column', gap:0, marginBottom:28 }}>
           {features.map((f,i)=>(
             <div key={i} style={{ display:'flex', alignItems:'center', gap:0, borderBottom:'1px solid #F0EDE8' }}>
-              <div style={{ width:4, alignSelf:'stretch', background: i%2===0 ? accentColor : `${accentColor}60`, flexShrink:0 }} />
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flex:1, padding:'14px 16px' }}>
-                <span style={{ fontSize:15, fontWeight:800, color:'#0F0F0F', fontFamily:"'Tajawal',sans-serif" }}>{f.title}</span>
-                <span style={{ fontSize:14, color:'#6A6A6A', fontWeight:500 }}>{f.desc}</span>
+              <div style={{ width:4, alignSelf:'stretch', background: i%2===0 ? accentColor : `${accentColor}50`, flexShrink:0 }} />
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flex:1, padding:'16px 18px' }}>
+                <span style={{ fontSize:17, fontWeight:900, color:'#0F0F0F', fontFamily:"'Tajawal',sans-serif" }}>{f.title}</span>
+                <span style={{ fontSize:15, color:'#5A5A5A', fontWeight:600 }}>{f.desc}</span>
               </div>
             </div>
           ))}
@@ -882,24 +834,65 @@ function MagazineFloor({ isAR, number, tag, title, subtitle, desc, features, pri
 
         {price && (
           <div style={{ display:'inline-flex', alignItems:'center', gap:12, background:`${accentColor}10`, border:`1px solid ${accentColor}30`, borderRadius:10, padding:'14px 20px' }}>
-            <span style={{ fontSize:20, fontWeight:900, color:accentColor, fontFamily:"'Tajawal',sans-serif" }}>{price}</span>
-            <span style={{ fontSize:12, color:'#6A6A6A' }}>{priceLabel}</span>
+            <span style={{ fontSize:22, fontWeight:900, color:accentColor, fontFamily:"'Tajawal',sans-serif" }}>{price}</span>
+            <span style={{ fontSize:13, color:'#6A6A6A' }}>{priceLabel}</span>
           </div>
         )}
         {!price && (
           <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:`${accentColor}10`, border:`1px solid ${accentColor}30`, borderRadius:10, padding:'12px 18px' }}>
-            <span style={{ fontSize:13, color:accentColor, fontWeight:700 }}>{priceLabel}</span>
+            <span style={{ fontSize:14, color:accentColor, fontWeight:700 }}>{priceLabel}</span>
           </div>
         )}
       </div>
 
-      <div style={{ borderRadius:16, overflow:'hidden', minHeight:380, background:'linear-gradient(135deg,#f0ece6,#e8e2d8)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 8px 32px rgba(0,0,0,0.08)' }}>
-        {image ? (
-          <img src={image} alt={title} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+      {/* Image slider */}
+      <div style={{ borderRadius:16, overflow:'hidden', minHeight:400, background:'linear-gradient(135deg,#f0ece6,#e8e2d8)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 8px 32px rgba(0,0,0,0.08)', position:'relative', cursor: hasImages?'pointer':'default' }}
+        onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}>
+
+        {currentImg ? (
+          <img src={currentImg} alt={title} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'opacity 0.4s' }}
+            onClick={()=>onLightbox(images)} />
         ) : (
           <div style={{ textAlign:'center', padding:40 }}>
             <div style={{ fontSize:40, marginBottom:12, opacity:0.2 }}>📷</div>
             <span style={{ fontSize:13, color:'#8A8A8A', fontWeight:600 }}>{placeholder}</span>
+          </div>
+        )}
+
+        {/* Arrows — shown on hover if multiple images */}
+        {hasImages && images.length > 1 && (
+          <>
+            <button onClick={e=>{ e.stopPropagation(); setImgIdx(i=>i>0?i-1:images.length-1) }}
+              style={{ position:'absolute', top:'50%', right:14, transform:'translateY(-50%)', width:42, height:42, borderRadius:'50%', background:'rgba(255,255,255,0.92)', border:'none', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 16px rgba(0,0,0,0.2)', opacity: hovered?1:0.4, transition:'opacity 0.3s', fontWeight:900, color:'#0F0F0F' }}>‹</button>
+            <button onClick={e=>{ e.stopPropagation(); setImgIdx(i=>i<images.length-1?i+1:0) }}
+              style={{ position:'absolute', top:'50%', left:14, transform:'translateY(-50%)', width:42, height:42, borderRadius:'50%', background:'rgba(255,255,255,0.92)', border:'none', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 16px rgba(0,0,0,0.2)', opacity: hovered?1:0.4, transition:'opacity 0.3s', fontWeight:900, color:'#0F0F0F' }}>›</button>
+          </>
+        )}
+
+        {/* Photo counter + hint */}
+        {hasImages && (
+          <div style={{ position:'absolute', bottom:14, left:'50%', transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
+            {/* Dots */}
+            {images.length > 1 && (
+              <div style={{ display:'flex', gap:5 }}>
+                {images.map((_,i)=>(
+                  <div key={i} onClick={e=>{ e.stopPropagation(); setImgIdx(i) }} style={{ width: imgIdx===i?20:6, height:6, borderRadius:3, background: imgIdx===i?'#fff':'rgba(255,255,255,0.5)', transition:'all 0.3s', cursor:'pointer' }} />
+                ))}
+              </div>
+            )}
+            {/* Click hint */}
+            {hovered && (
+              <div style={{ background:'rgba(0,0,0,0.6)', color:'#fff', fontSize:11, fontWeight:700, padding:'4px 10px', borderRadius:20, letterSpacing:0.5 }}>
+                {isAR ? `🔍 اضغط لعرض الكل (${images.length} صورة)` : `🔍 Click to view all (${images.length} photos)`}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Swipe hint badge — always visible if multiple */}
+        {hasImages && images.length > 1 && !hovered && (
+          <div style={{ position:'absolute', top:14, right:14, background:'rgba(0,0,0,0.55)', color:'#fff', fontSize:11, fontWeight:700, padding:'5px 12px', borderRadius:20, display:'flex', alignItems:'center', gap:5 }}>
+            ‹ {images.length} {isAR?'صور':'photos'} ›
           </div>
         )}
       </div>
