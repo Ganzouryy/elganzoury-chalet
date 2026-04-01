@@ -13,7 +13,7 @@ interface Props {
   content: Content[]
 }
 
-export default function ChaletWebsite({ pricing, media, content }: Props) {
+export default function ChaletWebsite({ pricing: initialPricing, media: initialMedia, content: initialContent }: Props) {
   const [isAR, setIsAR] = useState(true)
   const [navScrolled, setNavScrolled] = useState(false)
   const [activeFloor, setActiveFloor] = useState('ground')
@@ -27,6 +27,28 @@ export default function ChaletWebsite({ pricing, media, content }: Props) {
   const [bookings, setBookings] = useState<{check_in:string,check_out:string}[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+
+  // Live data state — always fetched fresh from Supabase
+  const [pricing, setPricing] = useState<Pricing[]>(initialPricing)
+  const [media, setMedia] = useState<Media[]>(initialMedia)
+  const [content, setContent] = useState<Content[]>(initialContent)
+
+  // Fetch ALL live data from Supabase on every page load
+  useEffect(() => {
+    const fetchLiveData = async () => {
+      const [p, m, c, b] = await Promise.all([
+        supabase.from('pricing').select('*'),
+        supabase.from('media').select('*').order('sort_order'),
+        supabase.from('site_content').select('*'),
+        supabase.from('bookings').select('check_in,check_out').eq('status','confirmed'),
+      ])
+      if (p.data) setPricing(p.data)
+      if (m.data) setMedia(m.data)
+      if (c.data) setContent(c.data)
+      if (b.data) setBookings(b.data)
+    }
+    fetchLiveData()
+  }, [])
 
   const t = useCallback((key: string, fallbackAr: string, fallbackEn: string) => {
     const item = content.find(c => c.key === key)
@@ -46,12 +68,8 @@ export default function ChaletWebsite({ pricing, media, content }: Props) {
   const weekendPrice = pricing.find(p => p.period_type === 'weekend')?.price || 2000
 
   useEffect(() => {
-    supabase.from('bookings').select('check_in,check_out').eq('status','confirmed')
-      .then(({ data }) => { if (data) setBookings(data) })
-  }, [])
-
-  useEffect(() => {
     const handler = () => setNavScrolled(window.scrollY > 60)
+
     window.addEventListener('scroll', handler)
     return () => window.removeEventListener('scroll', handler)
   }, [])
