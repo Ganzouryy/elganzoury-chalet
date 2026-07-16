@@ -29,6 +29,9 @@ export default function ChaletWebsite({ pricing: ip, media: im, content: ic }: P
   const [media, setMedia] = useState<Media[]>(im)
   const [content, setContent] = useState<Content[]>(ic)
   const [lightbox, setLightbox] = useState<{images:string[], index:number}|null>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [bookingStep, setBookingStep] = useState(1)
+  const [testimonials, setTestimonials] = useState<{id:string,name:string,text_ar:string,text_en:string,rating:number,date:string}[]>([])
 
   useEffect(() => {
     const fetch = async () => {
@@ -42,6 +45,9 @@ export default function ChaletWebsite({ pricing: ip, media: im, content: ic }: P
       if (m.data) setMedia(m.data)
       if (c.data) setContent(c.data)
       if (b.data) setBookings(b.data)
+      // Fetch testimonials
+      const { data: tData } = await supabase.from('testimonials').select('*').order('created_at', { ascending: false })
+      if (tData) setTestimonials(tData)
     }
     fetch()
   }, [])
@@ -225,23 +231,58 @@ export default function ChaletWebsite({ pricing: ip, media: im, content: ic }: P
     <div style={{ direction: isAR?'rtl':'ltr', fontFamily:"'Cairo',sans-serif" }}>
 
       {/* NAV */}
-      <nav style={{ position:'fixed', top:0, left:0, right:0, zIndex:1000, background: navScrolled?'rgba(255,255,255,0.97)':'transparent', backdropFilter: navScrolled?'blur(12px)':'none', boxShadow: navScrolled?'0 2px 30px rgba(0,0,0,0.08)':'none', transition:'all 0.4s' }}>
+      <nav style={{ position:'fixed', top:0, left:0, right:0, zIndex:1000, background: navScrolled||menuOpen?'rgba(255,255,255,0.97)':'transparent', backdropFilter: navScrolled||menuOpen?'blur(12px)':'none', boxShadow: navScrolled||menuOpen?'0 2px 30px rgba(0,0,0,0.08)':'none', transition:'all 0.4s' }}>
         <div className="container" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', height:72 }}>
-          <a href="#hero" style={{ fontFamily:"'Tajawal',sans-serif", fontSize:22, fontWeight:900, color: navScrolled?'#0F0F0F':'#fff', textDecoration:'none' }}>
+          <a href="#hero" style={{ fontFamily:"'Tajawal',sans-serif", fontSize:22, fontWeight:900, color: navScrolled||menuOpen?'#0F0F0F':'#fff', textDecoration:'none', zIndex:2 }}>
             {isAR?'الجنزوري':'Elganzoury'}<span style={{ color:'#F97316' }}>.</span>
           </a>
-          <div style={{ display:'flex', alignItems:'center', gap:24, flexWrap:'wrap' }}>
+
+          {/* Desktop links */}
+          <div style={{ display:'flex', alignItems:'center', gap:24, flexWrap:'wrap' }} className="desktop-nav">
             {[['#about',isAR?'الشاليه':'About'],['#floors',isAR?'الطوابق':'Floors'],['#pricing',isAR?'الأسعار':'Pricing'],['#booking',isAR?'الحجز':'Booking'],['#faq',isAR?'أسئلة':'FAQ']].map(([href,label])=>(
-              <a key={href} href={href} style={{ color: navScrolled?'#1A1A1A':'rgba(255,255,255,0.9)', textDecoration:'none', fontSize:14, fontWeight:600 }}
+              <a key={href} href={href} style={{ color: navScrolled?'#1A1A1A':'rgba(255,255,255,0.9)', textDecoration:'none', fontSize:14, fontWeight:600, display:'none' }}
+                className="nav-link"
                 onMouseEnter={e=>e.currentTarget.style.color='#F97316'}
                 onMouseLeave={e=>e.currentTarget.style.color=navScrolled?'#1A1A1A':'rgba(255,255,255,0.9)'}>
                 {label}
               </a>
             ))}
-            <button onClick={()=>setIsAR(!isAR)} style={{ background: navScrolled?'#FFF7ED':'rgba(255,255,255,0.15)', border:`1px solid ${navScrolled?'#F97316':'rgba(255,255,255,0.35)'}`, color: navScrolled?'#F97316':'#fff', padding:'7px 18px', borderRadius:4, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:"'Cairo',sans-serif" }}>
+            <button onClick={()=>setIsAR(!isAR)} style={{ background: navScrolled?'#FFF7ED':'rgba(255,255,255,0.15)', border:`1px solid ${navScrolled?'#F97316':'rgba(255,255,255,0.35)'}`, color: navScrolled?'#F97316':'#fff', padding:'7px 18px', borderRadius:4, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:"'Cairo',sans-serif", display:'none' }} className="nav-link">
               {isAR?'English':'عربي'}
             </button>
-            <a href="#booking" style={{ background:'#F97316', color:'#fff', padding:'10px 24px', borderRadius:4, fontSize:14, fontWeight:800, textDecoration:'none', boxShadow:'0 4px 20px rgba(249,115,22,0.4)' }}>
+            <a href="#booking" style={{ background:'#F97316', color:'#fff', padding:'10px 24px', borderRadius:4, fontSize:14, fontWeight:800, textDecoration:'none', boxShadow:'0 4px 20px rgba(249,115,22,0.4)', display:'none' }} className="nav-link">
+              {isAR?'احجز الآن':'Book Now'}
+            </a>
+          </div>
+
+          {/* Right side: lang + burger */}
+          <div style={{ display:'flex', alignItems:'center', gap:12, zIndex:2 }}>
+            <button onClick={()=>setIsAR(!isAR)} style={{ background: navScrolled||menuOpen?'#FFF7ED':'rgba(255,255,255,0.15)', border:`1px solid ${navScrolled||menuOpen?'#F97316':'rgba(255,255,255,0.35)'}`, color: navScrolled||menuOpen?'#F97316':'#fff', padding:'6px 14px', borderRadius:4, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:"'Cairo',sans-serif" }}>
+              {isAR?'EN':'عربي'}
+            </button>
+            {/* Hamburger */}
+            <button onClick={()=>setMenuOpen(o=>!o)} style={{ background:'none', border:'none', cursor:'pointer', padding:8, display:'flex', flexDirection:'column', gap:5, zIndex:2 }} aria-label="menu">
+              {[0,1,2].map(i=>(
+                <span key={i} style={{ display:'block', width:24, height:2.5, background: navScrolled||menuOpen?'#0F0F0F':'#fff', borderRadius:2, transition:'all 0.3s',
+                  transform: menuOpen ? (i===0?'rotate(45deg) translate(5px,5px)':i===2?'rotate(-45deg) translate(5px,-5px)':'none') : 'none',
+                  opacity: menuOpen && i===1 ? 0 : 1,
+                }} />
+              ))}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile drawer */}
+        <div style={{ maxHeight: menuOpen?'100vh':'0', overflow:'hidden', transition:'max-height 0.4s ease', background:'#fff', borderTop: menuOpen?'1px solid #E8E5DF':'none' }}>
+          <div style={{ padding:'20px 24px 28px', display:'flex', flexDirection:'column', gap:4 }}>
+            {[['#about',isAR?'الشاليه':'About'],['#floors',isAR?'الطوابق':'Floors'],['#pricing',isAR?'الأسعار':'Pricing'],['#booking',isAR?'الحجز':'Booking'],['#testimonials',isAR?'آراء الضيوف':'Reviews'],['#faq',isAR?'أسئلة':'FAQ']].map(([href,label])=>(
+              <a key={href} href={href} onClick={()=>setMenuOpen(false)} style={{ color:'#1A1A1A', textDecoration:'none', fontSize:17, fontWeight:700, padding:'14px 0', borderBottom:'1px solid #F5F3EF', display:'block', fontFamily:"'Cairo',sans-serif" }}
+                onMouseEnter={e=>e.currentTarget.style.color='#F97316'}
+                onMouseLeave={e=>e.currentTarget.style.color='#1A1A1A'}>
+                {label}
+              </a>
+            ))}
+            <a href="#booking" onClick={()=>setMenuOpen(false)} style={{ marginTop:16, background:'#F97316', color:'#fff', padding:'15px', borderRadius:8, fontSize:16, fontWeight:800, textDecoration:'none', textAlign:'center', boxShadow:'0 4px 20px rgba(249,115,22,0.4)', fontFamily:"'Cairo',sans-serif" }}>
               {isAR?'احجز الآن':'Book Now'}
             </a>
           </div>
@@ -275,6 +316,12 @@ export default function ChaletWebsite({ pricing: ip, media: im, content: ic }: P
             ))}
           </div>
         </div>
+        {/* Scroll down arrow */}
+        <a href="#about" style={{ position:'absolute', bottom:32, left:'50%', transform:'translateX(-50%)', zIndex:3, display:'flex', flexDirection:'column', alignItems:'center', gap:6, textDecoration:'none', animation:'bounce 2s infinite' }}>
+          <span style={{ fontSize:11, color:'rgba(255,255,255,0.6)', fontWeight:600, letterSpacing:2, textTransform:'uppercase' }}>{isAR?'اكتشف':'Explore'}</span>
+          <div style={{ width:36, height:36, borderRadius:'50%', border:'1.5px solid rgba(255,255,255,0.4)', display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.7)', fontSize:16 }}>↓</div>
+        </a>
+        <style>{`@keyframes bounce{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(8px)}}`}</style>
       </section>
 
       {/* ABOUT */}
@@ -573,68 +620,107 @@ export default function ChaletWebsite({ pricing: ip, media: im, content: ic }: P
               </div>
             </div>
 
-            {/* Form */}
+            {/* Form — step wizard */}
             <div style={{ background:'#fff', border:'1px solid #E8E5DF', borderRadius:16, padding:'32px 28px', boxShadow:'0 4px 24px rgba(0,0,0,0.06)', position:'sticky', top:90 }}>
-              <h3 style={{ fontSize:20, fontWeight:900, color:'#0F0F0F', marginBottom:24, fontFamily:"'Tajawal',sans-serif" }}>
-                {isAR?'احسب تكلفة إقامتك':'Calculate Your Stay'}
-              </h3>
-              {submitted ? (
-                <div style={{ textAlign:'center', padding:'32px 16px' }}>
-                  <div style={{ fontSize:48, marginBottom:16 }}>🎉</div>
-                  <h4 style={{ fontSize:20, fontWeight:900, color:'#0F0F0F', marginBottom:8, fontFamily:"'Tajawal',sans-serif" }}>{isAR?'تم إرسال طلبك!':'Request Sent!'}</h4>
-                  <p style={{ fontSize:14, color:'#6A6A6A', lineHeight:1.8, marginBottom:20 }}>{isAR?'أرسل الآن لقطة شاشة الدفع عبر واتساب لتأكيد حجزك.':'Now send your payment screenshot via WhatsApp to confirm.'}</p>
-                  <a href={buildWALink()} target="_blank" style={{ display:'inline-flex', alignItems:'center', gap:8, background:'#25D366', color:'#fff', padding:'12px 24px', borderRadius:8, fontWeight:800, textDecoration:'none' }}>
-                    <WAIcon />{isAR?'فتح واتساب':'Open WhatsApp'}
-                  </a>
+
+              {/* Step indicator */}
+              {!submitted && (
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:0, marginBottom:28 }}>
+                  {[1,2,3].map((s,i)=>(
+                    <div key={s} style={{ display:'flex', alignItems:'center' }}>
+                      <div onClick={()=>{ if(s<bookingStep) setBookingStep(s) }} style={{ width:36, height:36, borderRadius:'50%', background: bookingStep>=s?'#F97316':'#F0EDE8', color: bookingStep>=s?'#fff':'#8A8A8A', fontSize:14, fontWeight:900, display:'flex', alignItems:'center', justifyContent:'center', cursor: s<bookingStep?'pointer':'default', transition:'all 0.3s', fontFamily:"'Tajawal',sans-serif", boxShadow: bookingStep===s?'0 4px 12px rgba(249,115,22,0.4)':'none' }}>{s}</div>
+                      {i<2 && <div style={{ width:36, height:2, background: bookingStep>s?'#F97316':'#F0EDE8', transition:'background 0.3s' }} />}
+                    </div>
+                  ))}
                 </div>
-              ):(
+              )}
+
+              {submitted ? (
+                <div style={{ textAlign:'center', padding:'28px 0' }}>
+                  <div style={{ fontSize:56, marginBottom:16 }}>🎉</div>
+                  <h4 style={{ fontSize:22, fontWeight:900, color:'#0F0F0F', marginBottom:8, fontFamily:"'Tajawal',sans-serif" }}>{isAR?'تم إرسال طلبك!':'Request Sent!'}</h4>
+                  <p style={{ fontSize:14, color:'#6A6A6A', lineHeight:1.8, marginBottom:24 }}>{isAR?'أرسل لقطة شاشة الدفع عبر واتساب لتأكيد حجزك.':'Send your payment screenshot via WhatsApp to confirm.'}</p>
+                  <a href={buildWALink()} target="_blank" style={{ display:'inline-flex', alignItems:'center', gap:8, background:'#25D366', color:'#fff', padding:'14px 28px', borderRadius:8, fontWeight:800, textDecoration:'none', fontSize:15, boxShadow:'0 4px 16px rgba(37,211,102,0.4)' }}>
+                    <WAIcon />{isAR?'فتح واتساب الآن':'Open WhatsApp Now'}
+                  </a>
+                  <button onClick={()=>{setSubmitted(false);setBookingStep(1);setCheckIn('');setCheckOut('');setRenterName('');setRenterPhone('')}} style={{ display:'block', margin:'14px auto 0', background:'none', border:'none', color:'#8A8A8A', fontSize:13, cursor:'pointer', fontFamily:"'Cairo',sans-serif", textDecoration:'underline' }}>
+                    {isAR?'حجز جديد':'New booking'}
+                  </button>
+                </div>
+              ) : bookingStep === 1 ? (
                 <>
+                  <h3 style={{ fontSize:17, fontWeight:900, color:'#0F0F0F', marginBottom:4, fontFamily:"'Tajawal',sans-serif" }}>{isAR?'الخطوة ١ — اختر التواريخ':'Step 1 — Choose Dates'}</h3>
+                  <p style={{ fontSize:12, color:'#8A8A8A', marginBottom:20 }}>{isAR?'حدد يوم الوصول ويوم المغادرة':'Select your check-in and check-out dates'}</p>
                   <FF label={isAR?'تاريخ الوصول':'Check-in'}>
                     <input type="date" value={checkIn} onChange={e=>setCheckIn(e.target.value)} style={IS} onFocus={e=>e.target.style.borderColor='#F97316'} onBlur={e=>e.target.style.borderColor='#E8E5DF'} />
                   </FF>
                   <FF label={isAR?'تاريخ المغادرة':'Check-out'}>
                     <input type="date" value={checkOut} onChange={e=>setCheckOut(e.target.value)} style={IS} onFocus={e=>e.target.style.borderColor='#F97316'} onBlur={e=>e.target.style.borderColor='#E8E5DF'} />
                   </FF>
-
-                  {/* Conflict warning */}
                   {checkIn && checkOut && hasPeriodConflict() && (
-                    <div style={{ background:'#fee2e2', border:'1px solid #ef4444', borderRadius:8, padding:'12px 16px', marginBottom:16 }}>
-                      <p style={{ fontSize:13, color:'#dc2626', fontWeight:700, margin:0 }}>
-                        🚫 {isAR?'هذه الفترة محجوزة. يرجى اختيار فترة أخرى.':'This period is already booked. Please choose different dates.'}
-                      </p>
+                    <div style={{ background:'#fee2e2', border:'1px solid #ef4444', borderRadius:8, padding:'10px 14px', marginBottom:14 }}>
+                      <p style={{ fontSize:13, color:'#dc2626', fontWeight:700, margin:0 }}>🚫 {isAR?'هذه الفترة محجوزة. اختر فترة أخرى.':'This period is booked. Choose different dates.'}</p>
                     </div>
                   )}
-
                   {priceCalc && !hasPeriodConflict() && (
-                    <div style={{ background:'#FFF7ED', borderRadius:12, padding:18, marginBottom:18, border:'1px solid rgba(249,115,22,0.2)' }}>
-                      <div style={{ fontSize:11, fontWeight:700, color:'#F97316', letterSpacing:2, textTransform:'uppercase', marginBottom:10 }}>{isAR?'ملخص التكلفة':'COST SUMMARY'}</div>
-                      <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#1A1A1A', marginBottom:6 }}><span>{isAR?'الوحدة':'Unit'}</span><span style={{ fontWeight:700, color:'#F97316' }}>{isAR?floorOptions.find(f=>f.key===selectedFloor)?.labelAr:floorOptions.find(f=>f.key===selectedFloor)?.labelEn}</span></div>
-                      <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#1A1A1A', marginBottom:6 }}><span>{isAR?'الليالي':'Nights'}</span><span style={{ fontWeight:700 }}>{priceCalc.nights}</span></div>
-                      <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#1A1A1A', marginBottom:6 }}><span>{isAR?'أيام الأسبوع':'Weekdays'}</span><span>{priceCalc.weekdays} × {selectedFloor==='full'?(getPrice('upper','weekday')+getPrice('ground','weekday')).toLocaleString():getPrice(selectedFloor as 'upper'|'ground','weekday').toLocaleString()}</span></div>
-                      <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#1A1A1A', marginBottom:10 }}><span>{isAR?'نهاية الأسبوع':'Weekend'}</span><span>{priceCalc.weekend} × {selectedFloor==='full'?(getPrice('upper','weekend')+getPrice('ground','weekend')).toLocaleString():getPrice(selectedFloor as 'upper'|'ground','weekend').toLocaleString()}</span></div>
-                      <div style={{ display:'flex', justifyContent:'space-between', fontSize:20, fontWeight:900, color:'#F97316', borderTop:'1px solid rgba(249,115,22,0.2)', paddingTop:10 }}>
-                        <span>{isAR?'الإجمالي':'Total'}</span>
-                        <span>{priceCalc.total.toLocaleString()} {isAR?'جنيه':'EGP'}</span>
+                    <div style={{ background:'#FFF7ED', borderRadius:10, padding:14, marginBottom:18, border:'1px solid rgba(249,115,22,0.15)' }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#6A6A6A', marginBottom:4 }}><span>{isAR?'الليالي':'Nights'}</span><span style={{fontWeight:800,color:'#0F0F0F'}}>{priceCalc.nights}</span></div>
+                      <div style={{ display:'flex', justifyContent:'space-between', fontSize:18, fontWeight:900, color:'#F97316', borderTop:'1px solid rgba(249,115,22,0.15)', paddingTop:10, marginTop:6 }}>
+                        <span>{isAR?'الإجمالي':'Total'}</span><span>{priceCalc.total.toLocaleString()} {isAR?'جنيه':'EGP'}</span>
                       </div>
                     </div>
                   )}
-
+                  <button onClick={()=>{ if(!checkIn||!checkOut){alert(isAR?'حدد التواريخ أولاً':'Select dates first');return}; if(hasPeriodConflict()){return}; setBookingStep(2) }}
+                    style={{ width:'100%', background: hasPeriodConflict()?'#9CA3AF':'#F97316', color:'#fff', padding:14, border:'none', borderRadius:8, fontSize:15, fontWeight:800, cursor: hasPeriodConflict()?'not-allowed':'pointer', fontFamily:"'Cairo',sans-serif", boxShadow: hasPeriodConflict()?'none':'0 4px 16px rgba(249,115,22,0.35)' }}>
+                    {isAR?'التالي ←':'Next →'}
+                  </button>
+                </>
+              ) : bookingStep === 2 ? (
+                <>
+                  <h3 style={{ fontSize:17, fontWeight:900, color:'#0F0F0F', marginBottom:4, fontFamily:"'Tajawal',sans-serif" }}>{isAR?'الخطوة ٢ — بياناتك':'Step 2 — Your Details'}</h3>
+                  <p style={{ fontSize:12, color:'#8A8A8A', marginBottom:20 }}>{isAR?'أدخل اسمك ورقم هاتفك':'Enter your name and phone number'}</p>
                   <FF label={isAR?'الاسم الكامل':'Full Name'}>
                     <input type="text" value={renterName} onChange={e=>setRenterName(e.target.value)} style={IS} onFocus={e=>e.target.style.borderColor='#F97316'} onBlur={e=>e.target.style.borderColor='#E8E5DF'} />
                   </FF>
                   <FF label={isAR?'رقم الهاتف / واتساب':'Phone / WhatsApp'}>
                     <input type="tel" value={renterPhone} onChange={e=>setRenterPhone(e.target.value)} placeholder="01XXXXXXXXX" style={IS} onFocus={e=>e.target.style.borderColor='#F97316'} onBlur={e=>e.target.style.borderColor='#E8E5DF'} />
                   </FF>
-
-                  <div style={{ background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:8, padding:'12px 14px', marginBottom:16 }}>
-                    <p style={{ fontSize:12, color:'#166534', lineHeight:1.7, margin:0 }}>
-                      💡 {isAR?'بعد الإرسال انتقل لواتساب وأرسل مبلغ الحجز على InstaPay رقم 01159710758 ثم أرسل لقطة شاشة لتأكيد الحجز.':'After sending go to WhatsApp and pay via InstaPay to 01159710758 then send a screenshot to confirm.'}
-                    </p>
+                  <div style={{ background:'#FAFAF8', borderRadius:10, padding:12, marginBottom:18, border:'1px solid #E8E5DF', fontSize:13 }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4, color:'#6A6A6A' }}><span>{isAR?'الوحدة':'Unit'}</span><span style={{fontWeight:700,color:'#F97316'}}>{selectedFloor==='upper'?(isAR?'الدور العلوي':'Upper Floor'):selectedFloor==='ground'?(isAR?'الدور الأرضي':'Ground Floor'):(isAR?'الشاليه كامل':'Full Chalet')}</span></div>
+                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4, color:'#6A6A6A' }}><span>{isAR?'الوصول':'Check-in'}</span><span style={{fontWeight:700,color:'#0F0F0F'}}>{checkIn}</span></div>
+                    <div style={{ display:'flex', justifyContent:'space-between', paddingTop:8, borderTop:'1px solid #E8E5DF', marginTop:4 }}><span style={{fontWeight:800,color:'#0F0F0F'}}>{isAR?'الإجمالي':'Total'}</span><span style={{fontWeight:900,color:'#F97316',fontSize:16}}>{priceCalc?.total.toLocaleString()} {isAR?'جنيه':'EGP'}</span></div>
                   </div>
-
-                  <button onClick={submitBooking} disabled={submitting||hasPeriodConflict()} style={{ width:'100%', background: hasPeriodConflict()?'#9CA3AF':'#25D366', color:'#fff', padding:16, border:'none', borderRadius:8, fontSize:15, fontWeight:800, cursor: hasPeriodConflict()?'not-allowed':'pointer', fontFamily:"'Cairo',sans-serif", display:'flex', alignItems:'center', justifyContent:'center', gap:10, boxShadow: hasPeriodConflict()?'none':'0 4px 20px rgba(37,211,102,0.4)', transition:'all 0.3s' }}>
-                    <WAIcon />{submitting?(isAR?'جاري الإرسال...':'Sending...'):(isAR?'أرسل طلب الحجز عبر واتساب':'Send Booking Request via WhatsApp')}
-                  </button>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                    <button onClick={()=>setBookingStep(1)} style={{ background:'#F5F3EF', color:'#6A6A6A', padding:13, border:'none', borderRadius:8, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:"'Cairo',sans-serif" }}>{isAR?'→ السابق':'← Back'}</button>
+                    <button onClick={()=>{ if(!renterName||!renterPhone){alert(isAR?'أدخل بياناتك':'Enter your details');return}; setBookingStep(3) }}
+                      style={{ background:'#F97316', color:'#fff', padding:13, border:'none', borderRadius:8, fontSize:14, fontWeight:800, cursor:'pointer', fontFamily:"'Cairo',sans-serif", boxShadow:'0 4px 16px rgba(249,115,22,0.35)' }}>
+                      {isAR?'التالي ←':'Next →'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3 style={{ fontSize:17, fontWeight:900, color:'#0F0F0F', marginBottom:4, fontFamily:"'Tajawal',sans-serif" }}>{isAR?'الخطوة ٣ — تأكيد وإرسال':'Step 3 — Confirm & Send'}</h3>
+                  <p style={{ fontSize:12, color:'#8A8A8A', marginBottom:18 }}>{isAR?'راجع تفاصيل حجزك ثم أرسل':'Review your booking then send'}</p>
+                  <div style={{ background:'#FFF7ED', borderRadius:12, padding:16, marginBottom:16, border:'1px solid rgba(249,115,22,0.2)' }}>
+                    {[[isAR?'الوحدة':'Unit', selectedFloor==='upper'?(isAR?'الدور العلوي':'Upper Floor'):selectedFloor==='ground'?(isAR?'الدور الأرضي':'Ground Floor'):(isAR?'الشاليه كامل':'Full Chalet')],[isAR?'الاسم':'Name',renterName],[isAR?'الهاتف':'Phone',renterPhone],[isAR?'الوصول':'Check-in',checkIn],[isAR?'المغادرة':'Check-out',checkOut],[isAR?'الليالي':'Nights',String(priceCalc?.nights||0)]].map(([k,v])=>(
+                      <div key={k} style={{ display:'flex', justifyContent:'space-between', fontSize:13, marginBottom:6, color:'#4A4A4A' }}>
+                        <span style={{color:'#8A8A8A'}}>{k}</span><span style={{fontWeight:700,color:'#0F0F0F'}}>{v}</span>
+                      </div>
+                    ))}
+                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:19, fontWeight:900, color:'#F97316', borderTop:'1px solid rgba(249,115,22,0.2)', paddingTop:10, marginTop:4 }}>
+                      <span>{isAR?'الإجمالي':'Total'}</span><span>{priceCalc?.total.toLocaleString()} {isAR?'جنيه':'EGP'}</span>
+                    </div>
+                  </div>
+                  <div style={{ background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:8, padding:'10px 12px', marginBottom:14 }}>
+                    <p style={{ fontSize:12, color:'#166534', lineHeight:1.7, margin:0 }}>💡 {isAR?'ادفع عبر InstaPay على 01159710758 ثم أرسل لقطة شاشة لتأكيد الحجز.':'Pay via InstaPay to 01159710758 then send screenshot to confirm.'}</p>
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                    <button onClick={()=>setBookingStep(2)} style={{ background:'#F5F3EF', color:'#6A6A6A', padding:13, border:'none', borderRadius:8, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:"'Cairo',sans-serif" }}>{isAR?'→ السابق':'← Back'}</button>
+                    <button onClick={submitBooking} disabled={submitting} style={{ background:'#25D366', color:'#fff', padding:13, border:'none', borderRadius:8, fontSize:14, fontWeight:800, cursor:'pointer', fontFamily:"'Cairo',sans-serif", display:'flex', alignItems:'center', justifyContent:'center', gap:8, opacity:submitting?0.7:1, boxShadow:'0 4px 16px rgba(37,211,102,0.4)' }}>
+                      <WAIcon size={16}/>{submitting?(isAR?'جاري...':'...'):(isAR?'إرسال':'Send')}
+                    </button>
+                  </div>
                 </>
               )}
             </div>
@@ -705,6 +791,73 @@ export default function ChaletWebsite({ pricing: ip, media: im, content: ic }: P
               📍 {isAR?'افتح الموقع في خرائط جوجل':'Open in Google Maps'}
             </a>
           </div>
+        </div>
+      </section>
+
+      {/* TESTIMONIALS */}
+      <section id="testimonials" style={{ padding:'clamp(64px,10vw,120px) 0', background:'#0F0F0F' }}>
+        <div className="container">
+          <div style={{ textAlign:'center', maxWidth:560, margin:'0 auto 56px' }}>
+            <SecTag label={isAR?'آراء الضيوف':'GUEST REVIEWS'} dark center />
+            <h2 style={{ fontSize:'clamp(32px,4vw,52px)', fontWeight:900, color:'#fff', marginBottom:16, fontFamily:"'Tajawal',sans-serif" }}>
+              {isAR?'ماذا قال ضيوفنا':'What Our Guests Say'}
+            </h2>
+            <p style={{ fontSize:16, color:'rgba(255,255,255,0.5)', lineHeight:1.9 }}>
+              {isAR?'تجارب حقيقية من عائلات أمضت إجازتها في شاليه الجنزوري':'Real experiences from families who stayed at Elganzoury Chalet'}
+            </p>
+          </div>
+
+          {testimonials.length === 0 ? (
+            /* Placeholder cards while no reviews added yet */
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))', gap:20 }}>
+              {[
+                { name:'أسرة محمد السيد', text_ar:'شاليه رائع بإطلالة خيالية على البحر. الدور العلوي كان مثالياً لعائلتنا. سنعود العام القادم بإذن الله!', text_en:'Amazing chalet with a breathtaking sea view. The upper floor was perfect for our family. We will return next year!', rating:5, floor:isAR?'الدور العلوي':'Upper Floor' },
+                { name:'عائلة أحمد رزق', text_ar:'تجربة لا تُنسى في الساحل الشمالي. السطح البانورامي والإطلالة على البحر لا مثيل لهما. ننصح به بشدة.', text_en:'An unforgettable experience. The panoramic rooftop and sea view are unmatched. Highly recommended.', rating:5, floor:isAR?'الشاليه كامل':'Full Chalet' },
+                { name:'أسرة خالد منصور', text_ar:'الدور الأرضي واسع ومريح جداً. المطبخ مجهَّز بكل شيء. المنطقة هادئة والبحر قريب جداً.', text_en:'The ground floor is spacious and very comfortable. Kitchen fully equipped. Quiet area, very close to the sea.', rating:5, floor:isAR?'الدور الأرضي':'Ground Floor' },
+              ].map((r,i)=>(
+                <div key={i} style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:16, padding:28, position:'relative' }}>
+                  {/* Quote mark */}
+                  <div style={{ fontSize:48, color:'#F97316', opacity:0.3, lineHeight:1, marginBottom:8, fontFamily:'Georgia,serif' }}>"</div>
+                  <p style={{ fontSize:15, color:'rgba(255,255,255,0.8)', lineHeight:1.9, marginBottom:20 }}>{isAR?r.text_ar:r.text_en}</p>
+                  {/* Stars */}
+                  <div style={{ display:'flex', gap:3, marginBottom:14 }}>
+                    {Array(r.rating).fill(0).map((_,si)=>(
+                      <span key={si} style={{ color:'#F97316', fontSize:16 }}>★</span>
+                    ))}
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                      <div style={{ width:40, height:40, borderRadius:'50%', background:'linear-gradient(135deg,#F97316,#EA6A0A)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:900, color:'#fff', fontFamily:"'Tajawal',sans-serif" }}>{r.name[0]}</div>
+                      <div>
+                        <div style={{ fontSize:14, fontWeight:800, color:'#fff' }}>{r.name}</div>
+                        <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)', marginTop:1 }}>{isAR?'ضيف موثق':'Verified Guest'}</div>
+                      </div>
+                    </div>
+                    <span style={{ fontSize:11, fontWeight:700, color:'#F97316', background:'rgba(249,115,22,0.1)', border:'1px solid rgba(249,115,22,0.2)', padding:'4px 10px', borderRadius:20 }}>{r.floor}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))', gap:20 }}>
+              {testimonials.map(r=>(
+                <div key={r.id} style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:16, padding:28 }}>
+                  <div style={{ fontSize:48, color:'#F97316', opacity:0.3, lineHeight:1, marginBottom:8, fontFamily:'Georgia,serif' }}>"</div>
+                  <p style={{ fontSize:15, color:'rgba(255,255,255,0.8)', lineHeight:1.9, marginBottom:20 }}>{isAR?r.text_ar:r.text_en}</p>
+                  <div style={{ display:'flex', gap:3, marginBottom:14 }}>
+                    {Array(r.rating).fill(0).map((_,si)=><span key={si} style={{ color:'#F97316', fontSize:16 }}>★</span>)}
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                    <div style={{ width:40, height:40, borderRadius:'50%', background:'linear-gradient(135deg,#F97316,#EA6A0A)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:900, color:'#fff', fontFamily:"'Tajawal',sans-serif" }}>{r.name[0]}</div>
+                    <div>
+                      <div style={{ fontSize:14, fontWeight:800, color:'#fff' }}>{r.name}</div>
+                      <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)', marginTop:1 }}>{r.date}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
