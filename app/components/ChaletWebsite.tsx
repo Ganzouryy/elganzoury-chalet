@@ -817,9 +817,7 @@ export default function ChaletWebsite({ pricing: ip, media: im, content: ic }: P
               ].map((r,i)=>(
                 <div key={i} style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:16, padding:28, position:'relative' }}>
                   {/* Quote mark */}
-                  <div style={{ fontSize:48, color:'#F97316', opacity:0.3, lineHeight:1, marginBottom:8, fontFamily:'Georgia,serif' }}>"</div>
-                  <p style={{ fontSize:15, color:'rgba(255,255,255,0.8)', lineHeight:1.9, marginBottom:20 }}>{isAR?r.text_ar:r.text_en}</p>
-                  {/* Stars */}
+                  <div style={{ fontSize:48, color:'#F97316', opacity:0.3, lineHeight:1, marginBottom:8, fontFamily:'Georgia,serif' }}>&ldquo;</div>
                   <div style={{ display:'flex', gap:3, marginBottom:14 }}>
                     {Array(r.rating).fill(0).map((_,si)=>(
                       <span key={si} style={{ color:'#F97316', fontSize:16 }}>★</span>
@@ -842,7 +840,7 @@ export default function ChaletWebsite({ pricing: ip, media: im, content: ic }: P
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))', gap:20 }}>
               {testimonials.map(r=>(
                 <div key={r.id} style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:16, padding:28 }}>
-                  <div style={{ fontSize:48, color:'#F97316', opacity:0.3, lineHeight:1, marginBottom:8, fontFamily:'Georgia,serif' }}>"</div>
+                  <div style={{ fontSize:48, color:'#F97316', opacity:0.3, lineHeight:1, marginBottom:8, fontFamily:'Georgia,serif' }}>&ldquo;</div>
                   <p style={{ fontSize:15, color:'rgba(255,255,255,0.8)', lineHeight:1.9, marginBottom:20 }}>{isAR?r.text_ar:r.text_en}</p>
                   <div style={{ display:'flex', gap:3, marginBottom:14 }}>
                     {Array(r.rating).fill(0).map((_,si)=><span key={si} style={{ color:'#F97316', fontSize:16 }}>★</span>)}
